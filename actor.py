@@ -2,8 +2,6 @@ import numpy as np
 import tensorflow as tf 
 import tensorflow_probability as tfp 
 
-
-
 np.random.seed(1)
 tf.set_random_seed(1)
 
@@ -85,52 +83,51 @@ class LinearActor():
 	To handle the input, output uncertainty, 
 	we first test a simple linear policy.
 	"""
-	def __init__(self, action_dim, state_dim, learning_rate):
+	def __init__(self, action_dim, action_choice, state_dim, learning_rate, discrete_ac=False):
 		self.action_dim = action_dim
+		self.action_choice = action_choice
 		self.state_dim = state_dim
 		self.learning_rate = learning_rate
+		self.discrete_ac = discrete_ac
 
 		self.ep_m_obs, self.ep_s_obs, self.ep_ac_choosen, self.ep_pilco_r = [], [], [], []
 
 		self.tfd = tfp.distributions
 
-		self.weight = tf.Variable(tf.random_normal([self.state_dim, self.action_dim]))
-		self.bias = tf.Variable(tf.random_normal([self.action_dim]))
+		self.weight = tf.Variable(tf.random_normal([self.state_dim, self.action_dim], dtype=tf.float64))
+		self.bias = tf.Variable(tf.random_normal([self.action_dim], dtype=tf.float64))
 
 		self._build_net()
 
 		self.sess = tf.Session()
 		self.sess.run(tf.global_variables_initializer())
 
-	def _build_net(self, dertermine_state=False):   # to do !
+	def _build_net(self):
 
-		# We may get a state as input instead of mean
-		# and variance of state as input
-		#
 		with tf.variable_scope("linear_inputs"):
-			self.m_obs = tf.placeholder(tf.float32, [None, self.state_dim], name="mean_observations")
-			self.s_obs = tf.placeholder(tf.float32, [None, self.state_dim, self.state_dim], name="variance_observation")
+			self.m_obs = tf.placeholder(tf.float64, [None, self.state_dim], name="mean_observations")
+			self.s_obs = tf.placeholder(tf.float64, [None, self.state_dim, self.state_dim], name="variance_observation")
 
 		with tf.variable_scope("linear_optim_inputs"):
 			# the type of action in gym env
-			self.ac = tf.placeholder(tf.float32, [None, self.action_dim], name="action_choosen")
-			self.r = tf.placeholder(tf.float32, [None, ], name="return_from_pilco")
+			self.ac = tf.placeholder(tf.float64, [None, self.action_dim], name="action_choosen")
+			self.r = tf.placeholder(tf.float64, [None, ], name="return_from_pilco")
 
 		self.m_ac = tf.add(tf.matmul(self.m_obs, self.weight), self.bias)   # tf.add
 		weight = tf.reshape(self.weight, [1, self.state_dim, self.action_dim])
-		# weight = tf.tile(weight, [self.s_obs.shape[0], 1, 1])
-
+		# weight = tf.tile(weight, [self.s_obs.shape[0], 1, 1]) XXX
 		self.s_ac = tf.transpose(weight, perm=[0, 2, 1]) @ self.s_obs @ weight
-		# V ?
-		self.V = tf.transpose(self.weight)
+		# self.s_ac = tf.matmul(self.s_obs, self.weight)
+
+		# V: input-output covariance
+		# V: input-output covariance TODO
+		self.V = self.weight
 
 		# distribution of action
 		self.dist = self.tfd.Normal(loc=self.m_ac, scale=self.s_ac)
 
-
-
 		with tf.variable_scope("loss"):
-			# policy gradient: minimize -(log(pi)*r)
+			# policy gradient: minimize -(log(pi)*r)   #TODO: discrete case
 			neg_log_prob = - tf.log(self.dist.prob(self.ac))
 			loss = tf.reduce_mean(neg_log_prob * self.r)
 
@@ -148,8 +145,12 @@ class LinearActor():
 		:return: the mean, variance of action, input-output covariance?
 		"""
 		# m: mean of observation, s: variance of observation
+		# m = np.expand_dims(m, 0)
+		s = np.expand_dims(s, 0)
 		m_ac = self.sess.run(self.m_ac, feed_dict={self.m_obs: m})
 		s_ac = self.sess.run(self.s_ac, feed_dict={self.s_obs: s})
+		# m_ac = np.squeeze(m_ac, 0)
+		s_ac = np.squeeze(s_ac, 0)
 		V = self.sess.run(self.V)
 
 		# dist = self.tfd.Normal(loc=m_ac, scale=s_ac)
@@ -163,7 +164,7 @@ class LinearActor():
 		:param m: the mean of observation
 		:return: the mean of action
 		"""
-		m_ac, s_ac, V = self.compute_action(m, tf.zeros([self.state_dim, self.state_dim]))
+		m_ac = self.compute_action(m, tf.zeros([self.state_dim, self.state_dim]))[0]
 		return m_ac
 
 	def sample_action(self, m, s):
@@ -174,7 +175,34 @@ class LinearActor():
 		"""
 		dist = self.tfd.Normal(loc=m, scale=s)
 		# sample one action ?
-		a = dist.sample([1])
+		ac = dist.sample([1])
+		ac = self.sess.run(ac)
+
+		return ac
+
+	def take_action(self, m_x, s_x):
+		"""
+		:param m_x: mean of observation
+		:param s_x: variance of observation
+		:return: the choosen action in gym env -- to handle discrete case ?
+		"""
+		m_ac, s_ac, _ = self.compute_action(m_x, s_x)
+		ac = self.sample_action(m_ac, s_ac)   # a list of n num, n is the action dim, for discrete action space, we only need one
+
+		if self.discrete_ac:
+			# only for CartPole
+			if ac < 0:
+				ac = 0
+			else:
+				ac = 1
+			# ac_prob = tf.nn.softmax(ac, name="discrete_act_prob")
+			# ac = self.sess.run(ac_prob)
+			# ac = np.random.choice(ac.shape[1], p=ac.ravel())  # ac: a number between 0 and ac.shape[1] which is the action dim
+		else:
+			# cliprangge already exist in gym env
+			pass
+		return ac
+
 
 	def optimize(self, m_obs=None, s_obs=None, pilco_return=None, action_choosen=None):
 		"""

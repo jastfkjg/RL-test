@@ -17,8 +17,8 @@ import math
 #     def compute_reward(self, m, s):
 #         raise NotImplementedError
 class Reward:
-    def __init__(self, state):
-        self.state = state
+    def __init__(self):
+        pass
 
     def compute_reward(self):
         raise NotImplementedError
@@ -29,23 +29,18 @@ class CartPoleReward(Reward):
     the state of CartPole: Box(4)
     """
 
-    def __init__(self, state):
-        super().__init__(state)
+    def __init__(self):
+        super().__init__()
         self.theta_threshold_radians = 12 * 2 * math.pi / 360
         self.x_threshold = 2.4
 
-    def compute_reward(self, state=None):
+    def compute_reward(self, state):
         """
         :param state: type: np.ndarray
         :return: reward
         """
-        if state:
-            s = state
-        else:
-            s = self.state
-
+        s = state
         x, x_dot, theta, theta_dot = s
-
         done = x < -self.x_threshold \
                or x > self.x_threshold \
                or theta < -self.theta_threshold_radians \
@@ -69,8 +64,53 @@ class CartPoleReward(Reward):
         # s_x, s_x_dot, s_theta, s_theta_dot = s_state
 
         # the function to be integrated
-        def f(x, x_dot, theta, theta_dot):
-            state = (x, x_dot, theta, theta_dot)
+        def f(u):
+            # proba = norm.pdf(u1, loc=0, scale=1) * norm.pdf(u2, 0, 1) * norm.pdf(u3, 0, 1) * norm.pdf(u4, 0, 1)
+            # sqrt_s = np.array(list(map(math.sqrt, s_state)))
+            proba = norm.pdf(u, loc=0, scale=1)
+            batched_eye = np.eye(s_state.shape[0])
+            L = np.linalg.cholesky(s_state + 0.01 * batched_eye)
+            u = np.array([u] * s_state.shape[0])
+            reward_density = proba * self.compute_reward(m_state + np.dot(L, u))
+            return reward_density
+
+        # def f(x, x_dot, theta, theta_dot):
+        #     state = (x, x_dot, theta, theta_dot)
+        #     prob_density = 1.0
+        #     for s, m_x, s_x in zip(state, m_state, s_state):
+        #         prob_density = prob_density * norm.pdf(s, loc=m_x, scale=s_x)
+        #     reward_density = prob_density * self.compute_reward(state)
+        #     return reward_density
+
+        reward = integrate.quad(f, -np.inf, np.inf)[0]
+        # too complicated to calculate
+        # reward = integrate.nquad(f, [[-5., 5.], [-5., 5.], [-5., 5.], [-5., 5.]])[0]
+        return reward
+
+class PendulumReward(Reward):
+    """
+    Calculate reward for gym Pendulum env
+    the state of Pendulum is Box(2)
+    """
+    def __init__(self):
+        super().__init__()
+        self.max_torque = 2.
+
+    def compute_reward(self, u, state):
+
+        s = state
+        th, thdot = s
+        u = np.clip(u, -self.max_torque, self.max_torque)[0]
+        costs = self.angle_normalize(th) ** 2 + .1 * thdot ** 2 + .001 * (u ** 2)
+        return -costs
+
+    def angle_normalize(self, x):
+        return (((x + np.pi) % (2 * np.pi)) - np.pi)
+
+    def compute_gaussian_reward(self, m_state, s_state):
+        # the function to be integrated
+        def f(theta, theta_dot):
+            state = (theta, theta_dot)
             prob_density = 1.0
             for s, m_x, s_x in zip(state, m_state, s_state):
                 prob_density = prob_density * norm.pdf(s, loc=m_x, scale=s_x)
@@ -78,45 +118,44 @@ class CartPoleReward(Reward):
             return reward_density
 
         # reward = integrate.quad(, -np.inf, np.inf)    # quatruple
-        reward = integrate.nquad(f, [[-np.inf, np.inf], [-np.inf, np.inf], [-np.inf, np.inf], [-np.inf, np.inf]])
-
+        reward = integrate.nquad(f, [[-np.inf, np.inf], [-np.inf, np.inf]])[0]
         return reward
 
-
-class PendulumReward(Reward):
+class InvertedPendulumReward(Reward):
     """
-    Calculate reward for gym Pendulum env
-    the state of Pendulum is Box(2)
+    Reward function of inverted_pendulum in mujoco
     """
-    def __init__(self, state):
-        super().__init__(state)
-        self.max_torque = 2.
+    def __init__(self):
+        super().__init__()
 
-    def compute_reward(self, u, state=None):
-        if state:
-            s = state
+    def compute_reward(self, state):
+        s = state
+        notdone = np.isfinite(s).all() and (np.abs(s[1]) <= .2)
+        done = not notdone
+        if done:
+            return 0.0
         else:
-            s = self.state
+            return 1.0
 
-        th, thdot = s
+    def compute_gaussian_reward(self, m_state, s_state, state_dim):
+        # TODO
 
-        u = np.clip(u, -self.max_torque, self.max_torque)[0]
+        def f(state):
+            prob_density = norm.pdf(state, loc=m_state, scale=s_state)
 
-        costs = self.angle_normalize(th) ** 2 + .1 * thdot ** 2 + .001 * (u ** 2)
+class HumanoidReward(Reward):
+    # see https://github.com/openai/gym/blob/master/gym/envs/mujoco/humanoid.py
+    def __init__(self):
+        pass
 
-        return -costs
+    def compute_reward(self, state):
+        pass
 
-    def angle_normalize(self, x):
-        return (((x + np.pi) % (2 * np.pi)) - np.pi)
+    def mass_center(self, ):
+        pass
 
 # np.random.RandomState
 # - what is the reward function for gym games?
-
-
-
-
-
-
 
 
 # # we don't need to use the special Reward function in PILCO

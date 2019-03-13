@@ -2,13 +2,15 @@ import numpy as np
 import tensorflow as tf
 import gpflow
 import pandas as pd
+import time
 
 from actor import Actor, LinearActor
-from .mgpr import MGPR
-from .smgpr import SMGPR
+from mgpr import MGPR
+from smgpr import SMGPR
 # from .. import controllers
 import rewards
 
+# float64
 float_type = gpflow.settings.dtypes.float_type
 
 
@@ -57,20 +59,25 @@ class PILCO:
     def optimize_controller(self, states, horizon):
         """
         optimize controller's parameters
+        :param: states: a array of init states
         """
-        # how to choose init state:
+        # how to choose init states:
         # 1. random sample from the state_space
         # 2. random sample from the dataset
-        for state in states:
-            self.predict(state, np.diag(np.ones(self.state_dim) * 0.1), horizon)
-            self.get_data()
-        self.controller.optimize()
+        start = time.time()
+        s_x = np.diag(np.ones(self.state_dim) * 0.1)
+        for x in states:
+            # self.predict(state, np.diag(np.ones(self.state_dim) * 0.1), horizon)
+            m_x = np.expand_dims(x, 0)
+            self.get_data(m_x, s_x, horizon)
+            self.controller.optimize()
+        end = time.time()
+        print("Finished with policy/controller optimization in %.1f seconds" % (end - start))
 
-    def optimize(self):
-        '''
+    def optimize_gp(self):
+        """
         Optimizes  GP's hyperparamemeters.
-        '''
-        import time
+        """
         start = time.time()
         self.mgpr.optimize()      # GP optim
         end = time.time()
@@ -108,7 +115,11 @@ class PILCO:
         the first return from compute_action is the mean of action
         each time the variance of the state is zero, which is not the truth ?
         """
-        return self.controller.compute_action(x_m, tf.zeros([self.state_dim, self.state_dim], float))[0]
+        return self.controller.compute_action(x_m, tf.zeros([self.state_dim, self.state_dim], float_type))[0]
+
+    def take_action(self, x_m):
+        # to handle discrete action space
+        return self.controller.take_action(x_m, tf.zeros([self.state_dim, self.state_dim], float_type))
 
     def predict(self, m_x, s_x, horizon, gamma):  # n: horizon  what if the game is done before n horizon
         # loop_vars = [
@@ -145,23 +156,26 @@ class PILCO:
         self.controller.store_transitions(m_x_init, s_x_init, reward)
         return m_x, s_x, reward  # mean, variance of state at timestep+n, cumulate reward in horizon
 
-    def get_data(self, m_x, s_x, horizon, gamma):  # does not use gamma for now
+    def get_data(self, m_x, s_x, horizon, gamma=None):  # does not use gamma(discount factor) for now
         """
         Get traning data for Controller
-        :param m_x: mean of init/start observation
-        :param s_x: variance of init observation
+        :param m_x: mean of init/start observation [1,dim_state]
+        :param s_x: variance of init observation, use re-parameterization
         :return: lists of mean, variance of different observations, cumulative reward and action_choosen
         """
-        ep_m_x, ep_s_x, ep_reward= [], [], []
+        ep_m_x, ep_s_x, ep_reward, ep_ac = [], [], [], []
 
         for i in range(horizon):
-            current_reward = self.reward.compute_gaussian_reward(m_x, s_x)
+            current_reward = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x)
             if current_reward <= 0.0:
                 ep_reward = list(map(lambda x: x + current_reward, ep_reward))
                 break
             else:
                 ep_m_x.append(m_x)
                 ep_s_x.append(s_x)
+                m_u, s_u, _ = self.controller.compute_action(m_x, s_x)
+                ac = self.controller.sample_action(m_x, s_x)
+                ep_ac.append(ac)
                 ep_reward = list(map(lambda x: x + current_reward, ep_reward))
                 ep_reward.append(current_reward)
                 m_x, s_x = self.propagate(m_x, s_x)
@@ -173,6 +187,10 @@ class PILCO:
         # return mean and variance of next state
 
         m_u, s_u, c_xu = self.controller.compute_action(m_x, s_x)   # m_x: mean of state, s_x: variance of state
+        # m_u.astype(float)
+        # s_u.astype(float)
+        # c_xu.astype(float)
+        # print(type(m_x[0]), type(m_u[0]))
 
         # the action is probabilistic -> how to calculate the pi(u|x) ???    policy gradient
 
