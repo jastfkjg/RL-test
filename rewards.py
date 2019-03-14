@@ -1,5 +1,5 @@
 
-import tensorflow as tf
+# import tensorflow as tf
 # from gpflow import Parameterized, Param, params_as_tensors, settings
 import numpy as np
 import scipy.integrate as integrate
@@ -7,8 +7,6 @@ from scipy.stats import norm
 import math
 
 # float_type = settings.dtypes.float_type
-
-
 # class Reward(Parameterized):
 #     def __init__(self):
 #         Parameterized.__init__(self)
@@ -64,12 +62,17 @@ class CartPoleReward(Reward):
         # s_x, s_x_dot, s_theta, s_theta_dot = s_state
 
         # the function to be integrated
-        def f(u):
+        def f(u, m_state, s_state):
+            # print(m_state, s_state)
             # proba = norm.pdf(u1, loc=0, scale=1) * norm.pdf(u2, 0, 1) * norm.pdf(u3, 0, 1) * norm.pdf(u4, 0, 1)
             # sqrt_s = np.array(list(map(math.sqrt, s_state)))
             proba = norm.pdf(u, loc=0, scale=1)
             batched_eye = np.eye(s_state.shape[0])
-            L = np.linalg.cholesky(s_state + 0.01 * batched_eye)
+            try:
+                L = np.linalg.cholesky(s_state + 0.01 * batched_eye)
+            except np.linalg.linalg.LinAlgError:
+                print('matrix is singular.')
+                return 0.
             u = np.array([u] * s_state.shape[0])
             reward_density = proba * self.compute_reward(m_state + np.dot(L, u))
             return reward_density
@@ -82,7 +85,7 @@ class CartPoleReward(Reward):
         #     reward_density = prob_density * self.compute_reward(state)
         #     return reward_density
 
-        reward = integrate.quad(f, -np.inf, np.inf)[0]
+        reward = integrate.quad(f, -20., 20., args=(m_state, s_state))[0]
         # too complicated to calculate
         # reward = integrate.nquad(f, [[-5., 5.], [-5., 5.], [-5., 5.], [-5., 5.]])[0]
         return reward

@@ -114,20 +114,27 @@ class LinearActor():
 			self.r = tf.placeholder(tf.float64, [None, ], name="return_from_pilco")
 
 		self.m_ac = tf.add(tf.matmul(self.m_obs, self.weight), self.bias)   # tf.add
+		# Use re-parameterization method to get action variance
+		# Note: we can not apply the same weights on action variance ?   How to restrict the output, when action dim is small
+		# whether it's possilbe to use deterministic policy -- do not have action variance here, maybe add a small variance for GP
+		# we can not apply deterministic policy since the Q function is not a function of action here, we can not do BP.
 		weight = tf.reshape(self.weight, [1, self.state_dim, self.action_dim])
 		# weight = tf.tile(weight, [self.s_obs.shape[0], 1, 1]) XXX
 		self.s_ac = tf.transpose(weight, perm=[0, 2, 1]) @ self.s_obs @ weight
 		# self.s_ac = tf.matmul(self.s_obs, self.weight)
 
-		# V: input-output covariance
+		# V: How to calculate input-output covariance
 		# V: input-output covariance TODO
-		self.V = self.weight
+		# 1. for NN, it's too complicate to calculate
+		# 2. gibbs sampling to calculate E(state*action) - m_state*m_action
+		self.V = self.weight  # shape: [state_dim, action_dim]
 
 		# distribution of action
 		self.dist = self.tfd.Normal(loc=self.m_ac, scale=self.s_ac)
 
 		with tf.variable_scope("loss"):
 			# policy gradient: minimize -(log(pi)*r)   #TODO: discrete case
+			# if we use deterministic policy, see DDPG or DPG for gradient calculating
 			neg_log_prob = - tf.log(self.dist.prob(self.ac))
 			loss = tf.reduce_mean(neg_log_prob * self.r)
 
@@ -146,10 +153,11 @@ class LinearActor():
 		"""
 		# m: mean of observation, s: variance of observation
 		# m = np.expand_dims(m, 0)
-		s = np.expand_dims(s, 0)
+		m = np.reshape(m, (1, self.state_dim))
+		s = np.reshape(s, (1, self.state_dim, self.state_dim))
 		m_ac = self.sess.run(self.m_ac, feed_dict={self.m_obs: m})
 		s_ac = self.sess.run(self.s_ac, feed_dict={self.s_obs: s})
-		# m_ac = np.squeeze(m_ac, 0)
+		m_ac = np.squeeze(m_ac, 0)
 		s_ac = np.squeeze(s_ac, 0)
 		V = self.sess.run(self.V)
 
@@ -173,10 +181,14 @@ class LinearActor():
 		:param s: variance of action
 		:return: a random sample from the action distribution
 		"""
-		dist = self.tfd.Normal(loc=m, scale=s)
-		# sample one action ?
-		ac = dist.sample([1])
-		ac = self.sess.run(ac)
+		# whether to use multinominal guassian distribution
+		# multivariate normal
+		ac = np.random.multivariate_normal(m, s, 1)
+		ac = np.squeeze(ac, 0)
+		# dist = self.tfd.Normal(loc=m, scale=s)
+		# # sample one action ?
+		# ac = dist.sample([1])
+		# ac = self.sess.run(ac)
 
 		return ac
 
@@ -190,7 +202,7 @@ class LinearActor():
 		ac = self.sample_action(m_ac, s_ac)   # a list of n num, n is the action dim, for discrete action space, we only need one
 
 		if self.discrete_ac:
-			# only for CartPole
+			# only for CartPole, TODO
 			if ac < 0:
 				ac = 0
 			else:
@@ -208,7 +220,6 @@ class LinearActor():
 		"""
 		optimize the policy, we take action_choosen as the mean action output from policy
 		"""
-
 		# m_obs: a list of mean state in an episode
 		# pilco_return: a list of cumulative reward from a list of state
 
@@ -219,12 +230,16 @@ class LinearActor():
 			action_choosen = self.ep_ac_choosen
 			pilco_return = self.ep_pilco_r
 
+		print("Now we begin the optimization for controller.")
+
 		self.sess.run(self.train_op, feed_dict={
 			self.m_obs: m_obs,
 			self.s_obs: s_obs,
 			self.ac: action_choosen,
 			self.r: pilco_return,
 			})
+
+		print("Controller optimization finished.")
 
 		# reset the episode record 
 		self.ep_m_obs, self.ep_s_obs, self.ep_pilco_r, self.ep_ac_choosen = [], [], [], []
@@ -233,11 +248,11 @@ class LinearActor():
 		"""
 		pilco_return: cumulative reward for a state
 		"""
-		self.ep_m_obs.append(m_obs)
-		self.ep_s_obs.append(s_obs)
+		self.ep_m_obs = m_obs
+		self.ep_s_obs = s_obs
 		if action_choosen:
-			self.ep_ac_choosen.append(action_choosen)
-		self.ep_pilco_r.append(pilco_return)
+			self.ep_ac_choosen = action_choosen
+		self.ep_pilco_r = pilco_return
 
 	def save_weights(self, path):
 		saver = tf.train.Saver()

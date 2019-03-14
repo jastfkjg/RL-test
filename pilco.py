@@ -26,6 +26,8 @@ class PILCO:
         self.control_dim = X.shape[1] - Y.shape[1]
         self.horizon = horizon
 
+        self.sess = tf.Session()
+
         if controller is None:   # the policy  - to change
             print("controller cannot be None")
         else:
@@ -115,11 +117,11 @@ class PILCO:
         the first return from compute_action is the mean of action
         each time the variance of the state is zero, which is not the truth ?
         """
-        return self.controller.compute_action(x_m, tf.zeros([self.state_dim, self.state_dim], float_type))[0]
+        return self.controller.compute_action(x_m, np.zeros([self.state_dim, self.state_dim], float_type))[0]
 
     def take_action(self, x_m):
         # to handle discrete action space
-        return self.controller.take_action(x_m, tf.zeros([self.state_dim, self.state_dim], float_type))
+        return self.controller.take_action(x_m, np.zeros([self.state_dim, self.state_dim], float_type))
 
     def predict(self, m_x, s_x, horizon, gamma):  # n: horizon  what if the game is done before n horizon
         # loop_vars = [
@@ -160,26 +162,29 @@ class PILCO:
         """
         Get traning data for Controller
         :param m_x: mean of init/start observation [1,dim_state]
-        :param s_x: variance of init observation, use re-parameterization
+        :param s_x: variance of init observation
         :return: lists of mean, variance of different observations, cumulative reward and action_choosen
         """
         ep_m_x, ep_s_x, ep_reward, ep_ac = [], [], [], []
 
         for i in range(horizon):
+            # print(m_x, s_x, np.squeeze(m_x, 0), s_x.shape)
             current_reward = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x)
+            print("m_state: ", m_x, "s_state: ", s_x)
+            print("reward for current state distribution: ", current_reward)
             if current_reward <= 0.0:
                 ep_reward = list(map(lambda x: x + current_reward, ep_reward))
                 break
             else:
-                ep_m_x.append(m_x)
+                ep_m_x.append(np.squeeze(m_x, 0))
                 ep_s_x.append(s_x)
                 m_u, s_u, _ = self.controller.compute_action(m_x, s_x)
-                ac = self.controller.sample_action(m_x, s_x)
+                ac = self.controller.sample_action(m_u, s_u)
                 ep_ac.append(ac)
                 ep_reward = list(map(lambda x: x + current_reward, ep_reward))
                 ep_reward.append(current_reward)
                 m_x, s_x = self.propagate(m_x, s_x)
-        self.controller.store_transitions(ep_m_x, ep_s_x, ep_reward)
+        self.controller.store_transition(ep_m_x, ep_s_x, ep_reward, ep_ac)
 
         return ep_m_x, ep_s_x, ep_reward
 
@@ -187,6 +192,7 @@ class PILCO:
         # return mean and variance of next state
 
         m_u, s_u, c_xu = self.controller.compute_action(m_x, s_x)   # m_x: mean of state, s_x: variance of state
+        m_u = np.expand_dims(m_u, 0)
         # m_u.astype(float)
         # s_u.astype(float)
         # c_xu.astype(float)
@@ -206,5 +212,7 @@ class PILCO:
 
         # While-loop requires the shapes of the outputs to be fixed
         M_x.set_shape([1, self.state_dim]); S_x.set_shape([self.state_dim, self.state_dim])
+
+        M_x, S_x = self.sess.run([M_x, S_x])
 
         return M_x, S_x  # m_u is always the same(the max proba),should we rather use the sampled action ?
