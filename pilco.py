@@ -26,7 +26,8 @@ class PILCO:
         self.control_dim = X.shape[1] - Y.shape[1]
         self.horizon = horizon
 
-        self.sess = tf.Session()
+        self.sess = gpflow.get_default_session()
+        # self.sess.run(tf.global_variables_initializer())
 
         if controller is None:   # the policy  - to change
             print("controller cannot be None")
@@ -213,6 +214,8 @@ class PILCO:
         # While-loop requires the shapes of the outputs to be fixed
         M_x.set_shape([1, self.state_dim]); S_x.set_shape([self.state_dim, self.state_dim])
 
-        M_x, S_x = self.sess.run([M_x, S_x])
+        # M_x, S_x = self.sess.run([M_x, S_x])
+        # M_x.eval()
+        # S_x.eval()
 
-        return M_x, S_x  # m_u is always the same(the max proba),should we rather use the sampled action ?
+        return M_x.eval(session=self.sess), S_x.eval(session=self.sess)  # m_u is always the same(the max proba),should we rather use the sampled action ?
