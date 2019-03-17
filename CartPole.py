@@ -66,7 +66,7 @@ for i in range(1, 3):
 RENDER = False
 learning_rate = 0.02
 reward_decay = 0.995
-max_episode = 20
+max_episode = 5
 # max_episode_step = 3000
 
 linear_controller = Actor(action_dim=action_dim, action_choice=action_choice, state_dim=state_dim, learning_rate=learning_rate, discrete_ac=discrete_ac)

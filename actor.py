@@ -116,7 +116,8 @@ class Actor():
 		:return: the mean, variance of action, input-output covariance?
 		"""
 		# add noise to solve Cholesky decomposition prob
-		batched_eye = np.eye(s.shape[0])
+		# batched_eye = np.eye(s.shape[0])
+		batched_eye = np.random.rand(s.shape[0], s.shape[0])
 		s_with_noise = s + 0.001 * batched_eye
 		dist_obs = self.tfd.MultivariateNormalFullCovariance(loc=m, covariance_matrix=s_with_noise)
 		states = dist_obs.sample([sample_num])   # [10, state_dim]
@@ -220,9 +221,13 @@ class Actor():
 			pilco_return = self.ep_pilco_r
 
 		print("Now we begin the optimization for controller.")
+		batch_size = len(s_obs)
+		# assert len(s_obs) == batch_size
+		# assert len(action_choosen) == batch_size
+		# assert len(pilco_return) == batch_size
 
 		# or we can concatenate m_obs, s_obs together for input
-		s_obs = np.reshape(s_obs, (s_obs.shape[0], self.state_dim * self.state_dim))
+		s_obs = np.reshape(s_obs, (batch_size, self.state_dim * self.state_dim))
 
 		self.sess.run(self.train_op, feed_dict={
 			self.m_obs: m_obs,

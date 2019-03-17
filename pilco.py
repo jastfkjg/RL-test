@@ -169,6 +169,7 @@ class PILCO:
         ep_m_x, ep_s_x, ep_reward, ep_ac = [], [], [], []
 
         for i in range(horizon):
+            print("Collecting " + str(i) + "th fake data for controller optimization.")
             # print(m_x, s_x, np.squeeze(m_x, 0), s_x.shape)
             current_reward = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x)
             print("m_state: ", m_x, "s_state: ", s_x)
