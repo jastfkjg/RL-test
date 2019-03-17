@@ -179,12 +179,15 @@ class PILCO:
             else:
                 ep_m_x.append(np.squeeze(m_x, 0))
                 ep_s_x.append(s_x)
-                m_u, s_u, _ = self.controller.compute_action(m_x, s_x)
+                m_u, s_u, _ = self.controller.compute_action(np.squeeze(m_x, 0), s_x)
                 ac = self.controller.sample_action(m_u, s_u)
                 ep_ac.append(ac)
                 ep_reward = list(map(lambda x: x + current_reward, ep_reward))
                 ep_reward.append(current_reward)
                 m_x, s_x = self.propagate(m_x, s_x)
+                # to solve the "nan in array" prob
+                m_x[np.isnan(m_x)] = 0.
+                s_x[np.isnan(s_x)] = 0.
         self.controller.store_transition(ep_m_x, ep_s_x, ep_reward, ep_ac)
 
         return ep_m_x, ep_s_x, ep_reward
@@ -192,14 +195,12 @@ class PILCO:
     def propagate(self, m_x, s_x):
         # return mean and variance of next state
 
-        m_u, s_u, c_xu = self.controller.compute_action(m_x, s_x)   # m_x: mean of state, s_x: variance of state
+        m_u, s_u, c_xu = self.controller.compute_action(np.squeeze(m_x, 0), s_x)   # m_x: mean of state, s_x: variance of state
         m_u = np.expand_dims(m_u, 0)
         # m_u.astype(float)
         # s_u.astype(float)
         # c_xu.astype(float)
         # print(type(m_x[0]), type(m_u[0]))
-
-        # the action is probabilistic -> how to calculate the pi(u|x) ???    policy gradient
 
         m = tf.concat([m_x, m_u], axis=1)
         s1 = tf.concat([s_x, s_x@c_xu], axis=1)

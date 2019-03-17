@@ -7,80 +7,6 @@ tf.set_random_seed(1)
 
 class Actor():
 
-	def __init__(self, action_dim, state_dim, learning_rate):
-		self.action_dim = action_dim
-		self.state_dim = state_dim
-		self.learning_rate = learning_rate
-
-		self._build_net()
-
-		self.sess = tf.Session()
-
-		self.sess.run(tf.global_variables_initializer())
-
-
-	def _build_net(self):
-		with tf.variable_scope("inputs"):
-			self.obs = tf.placeholder(tf.float32, [None, self.state_dim], name="observations")
-			# for cartpole-v0, dim of action is 1.
-			self.acts = tf.placeholder(tf.int32, [None, self.action_dim], name="actions_num")
-			# we use the pilco to estimate the future reward
-			self.vt = tf.placeholder(tf.float32, [None, ], name="actions_value") 
-
-		# fc1
-		layer = tf.layers.dense(inputs=self.obs, units=10, activation=tf.nn.tanh,
-			kernel_initializer=tf.random_normal_initializer(mean=0, stddev=0.3), 
-			bias_initializer=tf.constant_initializer(0.1), name='fc1')
-
-		# fc2
-		all_act = tf.layers.dense(inputs=layer, units=self.action_dim, activation=None,
-			kernel_initializer=tf.random_normal_initializer(mean=0, stddev=0.3),
-			bias_initializer=tf.constant_initializer(0.1), name='fc2')
-
-		self.all_act_prob = tf.nn.softmax(all_act, name="act_prob")
-
-		with tf.name_scope('loss'):
-			# minimize -(log(pi)*R)
-			neg_log_prob = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=all_act, labels=self.acts)
-
-			loss = tf.reduce_mean(neg_log_prob * self.vt)
-
-		with tf.variable_scope('train'):
-			self.train_op = tf.train.AdamOptimizer(self.learning_rate).minimize(loss)
-
-	def compute_action(self, m_ob, s_ob):
-		"""
-		# in: mean, variance of the state
-		# out: mean, variance of the action; inv(s)*cov(state, action)
-		# apply the re-param ????
-		"""
-		
-		prob_weights = self.sess.run(self.all_act_prob, feed_dict={self.obs: m_ob[np.newaxis, :]})
-		action = np.random.choice(range(prob_weights.shape[1]), p=prob_weights.ravel())
-		return action
-
-	def learn(self, pilco_reward):
-
-		self.sess.run(self.train_op, feed_dict={
-			self.obs: np.vstack(self.ep_obs),
-			self.acts: np.array(self.ep_acts),
-			self.vt: pilco_reward,
-			})
-
-	def store_transition(self, s, a, r):
-		self.ep_obs.append(s)
-		self.ep_acts.append(a)
-		self.ep_rs.append(r)
-
-	def save_model(self, path):
-		# save model weights
-		saver = tf.train.Saver()
-		save_path = saver.save(self.sess, path)
-		print("model saved in file: %s" % save_path)
-
-
-class Actor():
-
 	def __init__(self, action_dim, action_choice, state_dim, learning_rate, discrete_ac=False):
 		self.action_dim = action_dim
 		self.action_choice = action_choice
@@ -104,19 +30,21 @@ class Actor():
 
 		with tf.variable_scope("Inputs"):
 			self.m_obs = tf.placeholder(tf.float64, [None, self.state_dim], name="mean_observations")
-			self.s_obs = tf.placeholder(tf.float64, [None, self.state_dim, self.state_dim], name="variance_observation")
+			self.s_obs = tf.placeholder(tf.float64, [None, self.state_dim * self.state_dim], name="variance_observation")
 
 		with tf.variable_scope("Optim_inputs"):
 			# the type of action in gym env
 			self.ac = tf.placeholder(tf.float64, [None, self.action_dim], name="action_choosen")
 			self.r = tf.placeholder(tf.float64, [None, ], name="return_from_pilco")
 
-		self.m_obs = tf.expand_dims(self.m_obs, axis=2)    # [None, state_dim, 1]
+		# s_obs = tf.reshape(self.s_obs, [None, self.state_dim * self.state_dim])
+
+		# m_obs = tf.expand_dims(self.m_obs, axis=2)    # [None, state_dim, 1]
 
 		# consider to concatenate m_obs and s_obs
-		self.obs = tf.concat([self.m_obs, self.s_obs], 2)   # [None, state_dim, state_dim + 1]
+		self.obs = tf.concat([self.m_obs, self.s_obs], 1)   # [None, state_dim * (state_dim + 1)]
 
-		# How to choose the network architecture ?
+		# How to choose the network architecture ? normally we have hidden size of 5, 10, 15 ?
 
 		# fc1
 		layer = tf.layers.dense(inputs=self.obs, units=10, activation=tf.nn.tanh,
@@ -144,24 +72,32 @@ class Actor():
 		# 1. give a constant variance
 		# self.s_ac = 0.1 * tf.diag(s_ac)
 		# 2. use a neural network with m_obs, s_obs as input, just like m_ac
+		# here we only output the diag values in s_ac
 
 		self.s_ac = tf.layers.dense(inputs=layer, units=self.action_dim, activation=None,
 								kernel_initializer=tf.random_normal_initializer(mean=0, stddev=0.3),
 								bias_initializer=tf.constant_initializer(0.1), name='fc3')
-		self.s_ac = tf.diag(self.s_ac) # what if s_ac: [None, action_dim] 
+		# self.s_ac = tf.diag(self.s_ac) # what if s_ac: [None, action_dim]
 
 		# V: How to calculate input-output covariance
-		# V: input-output covariance TODO
+		# V: input-output covariance TODO:  calculate V
 		# 1. for NN, it's too complicate to calculate
-		# 2. gibbs sampling to calculate E(state*action) - m_state*m_action
-		self.V = self.weight  # shape: [state_dim, action_dim]
+		# 2. gibbs sampling to calculate V = E(state*action) - m_state*m_action
+		# To get E[state * action]:
+		# - sample states from self.m_obs, self.s_obs, actions from self.m_ac, self.s_ac
+		# - then compute mean of sum(state * action) = E(state * action]
+		# - V = E(state * action) - self.m_ac * self.m_obs
+		# # shape: [state_dim, action_dim]
+		# maybe move it to compute_action() method, because we don't need to calculate a batch of V
+		# self.V =
 
 		# distribution of action, we need to change to multi-variate gaussian dist
-		self.dist = self.tfd.Normal(loc=self.m_ac, scale=self.s_ac)
+		# or we may use re-parameterization trick
+		self.dist = self.tfd.MultivariateNormalDiag(loc=self.m_ac, scale_diag=self.s_ac)
+		# self.dist = self.tfd.Normal(loc=self.m_ac, scale=self.s_ac)
 
 		with tf.variable_scope("loss"):
 			# policy gradient: minimize -(log(pi)*r)   #TODO: discrete case
-			# whether to use cholesky decomposition ?
 			neg_log_prob = - tf.log(self.dist.prob(self.ac))
 			loss = tf.reduce_mean(neg_log_prob * self.r)
 
@@ -172,35 +108,61 @@ class Actor():
 	#  output the mean and variance of the action
 	#  the aciton space is continuous ? what if the action space is discret
 
-	def compute_action(self, m, s):
+	def compute_action(self, m, s, sample_num=10):
 		"""
+		This function only calculate a single action, not a batch of actions
 		:param m: mean of observation
 		:param s: variance of observation
 		:return: the mean, variance of action, input-output covariance?
 		"""
-		# m: mean of observation, s: variance of observation
-		# m = np.expand_dims(m, 0)
-		m = np.reshape(m, (1, self.state_dim))
-		s = np.reshape(s, (1, self.state_dim, self.state_dim))
-		m_ac = self.sess.run(self.m_ac, feed_dict={self.m_obs: m})
-		s_ac = self.sess.run(self.s_ac, feed_dict={self.s_obs: s})
-		m_ac = np.squeeze(m_ac, 0)
-		s_ac = np.squeeze(s_ac, 0)
-		V = self.sess.run(self.V)
+		# add noise to solve Cholesky decomposition prob
+		batched_eye = np.eye(s.shape[0])
+		s_with_noise = s + 0.001 * batched_eye
+		dist_obs = self.tfd.MultivariateNormalFullCovariance(loc=m, covariance_matrix=s_with_noise)
+		states = dist_obs.sample([sample_num])   # [10, state_dim]
 
-		# dist = self.tfd.Normal(loc=m_ac, scale=s_ac)
-		# a = dist.sample([1])  # sample one action ?
+		m = np.reshape(m, (1, self.state_dim))
+		m_obs = tf.transpose(m)
+		s = np.reshape(s, (1, self.state_dim * self.state_dim))
+		# obs = np.concatenate((m, s), 1)
+		m_ac = self.sess.run(self.m_ac, feed_dict={self.m_obs: m, self.s_obs: s})  # [1, action_dim] ? [1, 4, 1]
+		print("m action", m_ac)
+		m_ac = np.squeeze(m_ac, 0)     # [action_dim]
+
+		s_ac = self.sess.run(self.s_ac, feed_dict={self.m_obs: m, self.s_obs: s})  # [1, action_dim]
+		s_ac = np.squeeze(s_ac, 0)	  # [action_dim]
+
+		print("s action", s_ac)
+
+		# add noise to solve Cholesky decomposition prob
+		# batched_eye = np.eye(s_ac.shape[0])
+		# s_ac_with_noise = s_ac + 0.001 * batched_eye
+		dist_ac = self.tfd.MultivariateNormalDiag(loc=m_ac, scale_diag=s_ac)
+		actions = dist_ac.sample([sample_num])   # [10, action_dim]
+
+		s_ac = np.diag(s_ac)
+
+		# s_ac = s_ac * np.eye(self.action_dim)  # [action_dim, action_dim]
+
+		# dist_ac = self.tfd.MultivariateNormalFullCovariance(loc=m_ac, covariance_matrix=s_ac_with_noise)
+		# actions = dist_ac.sample([sample_num])
+
+		# E[state * action]
+		states = tf.transpose(states)
+		V = tf.matmul(states, actions) / sample_num - tf.matmul(m_obs, tf.expand_dims(m_ac, 0))
+
+		V = self.sess.run(V)
 
 		# return the mean, variance of action; input-output covariance, the sample action ?
 		return m_ac, s_ac, V
 
-	def compute_det_action(self, m):
-		"""
-		:param m: the mean of observation
-		:return: the mean of action
-		"""
-		m_ac = self.compute_action(m, tf.zeros([self.state_dim, self.state_dim]))[0]
-		return m_ac
+	# def compute_det_action(self, m):
+	# 	"""
+	# 	:param m: the mean of observation
+	# 	:return: the mean of action
+	# 	"""
+	# 	m_ac = self.compute_action(m, tf.zeros([self.state_dim, self.state_dim]))[0]
+	# 	return m_ac
 
 	def sample_action(self, m, s):
 		"""
@@ -258,6 +220,9 @@ class Actor():
 			pilco_return = self.ep_pilco_r
 
 		print("Now we begin the optimization for controller.")
+
+		# or we can concatenate m_obs, s_obs together for input
+		s_obs = np.reshape(s_obs, (s_obs.shape[0], self.state_dim * self.state_dim))
 
 		self.sess.run(self.train_op, feed_dict={
 			self.m_obs: m_obs,
@@ -378,6 +343,7 @@ class LinearActor():
 
 	def compute_det_action(self, m):
 		"""
+		calculate action with only mean of state
 		:param m: the mean of observation
 		:return: the mean of action
 		"""

@@ -69,7 +69,7 @@ reward_decay = 0.995
 max_episode = 20
 # max_episode_step = 3000
 
-linear_controller = LinearActor(action_dim=action_dim, action_choice=action_choice, state_dim=state_dim, learning_rate=learning_rate, discrete_ac=discrete_ac)
+linear_controller = Actor(action_dim=action_dim, action_choice=action_choice, state_dim=state_dim, learning_rate=learning_rate, discrete_ac=discrete_ac)
 cartpole_reward = CartPoleReward()  # consider to reset Reward function
 pilco = PILCO(X, Y, controller=linear_controller, reward=cartpole_reward, horizon=40)
 
