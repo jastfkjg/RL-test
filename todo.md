@@ -1,10 +1,21 @@
-TODO
+## TODO
 
 1. change the reward in get_data()
-2. We have two kind of data: 
+2. We have two kinds of data: 
     - real data from env
     - fake data using PILCO
     
     maybe we should store real data for further use
     
-3. test actor in each/several iteration, then plot
+3. test actor in each/several iteration, then plot ---Done
+4. implement other model-free/model-based RL:
+    - PG/AC/PPO
+    - PILCO/...
+
+5. other env: mujoco/Atari ? :
+    - add more reward class
+    - update actor network architecture
+    
+6. action variance too big ? add regularization on loss
+
+7. discount factor gamma to add

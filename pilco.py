@@ -15,7 +15,7 @@ float_type = gpflow.settings.dtypes.float_type
 
 
 class PILCO:
-    def __init__(self, X, Y, num_induced_points=None, horizon=30, controller=None,
+    def __init__(self, X, Y, num_induced_points=None, controller=None,
                 reward=None, m_init=None, S_init=None, name=None):
         # super(PILCO, self).__init__(name)
         if not num_induced_points:      # num_induced_points ?
@@ -24,7 +24,6 @@ class PILCO:
             self.mgpr = SMGPR(X, Y, num_induced_points)
         self.state_dim = Y.shape[1]
         self.control_dim = X.shape[1] - Y.shape[1]
-        self.horizon = horizon
 
         self.sess = gpflow.get_default_session()
         # self.sess.run(tf.global_variables_initializer())

@@ -118,7 +118,7 @@ class Actor():
 		# add noise to solve Cholesky decomposition prob
 		# batched_eye = np.eye(s.shape[0])
 		batched_eye = np.random.rand(s.shape[0], s.shape[0])
-		s_with_noise = s + 0.001 * batched_eye
+		s_with_noise = s + 0.01 * batched_eye
 		dist_obs = self.tfd.MultivariateNormalFullCovariance(loc=m, covariance_matrix=s_with_noise)
 		states = dist_obs.sample([sample_num])   # [10, state_dim]
 
