@@ -205,7 +205,30 @@ class Actor():
 			pass
 		return ac
 
-	def optimize(self, m_obs=None, s_obs=None, pilco_return=None, action_choosen=None):
+	def take_quick_action(self, state):
+		"""
+		compute_action is too slow because we need to calculate the input-output covariance
+		but in real env, it's unnecessary, this method is for interact with real env
+		"""
+		s_obs = np.diag(np.ones(self.state_dim) * 0.1)  # [state_dim, state_dim]
+		m_obs = np.reshape(state, (1, self.state_dim))  # [1, state_dim]
+		s_obs = np.reshape(s_obs, (1, self.state_dim * self.state_dim))  # [1, state_dim, state_dim]
+
+		m_ac = self.sess.run(self.m_ac, feed_dict={self.m_obs: m_obs, self.s_obs: s_obs})  # [1, action_dim]
+		m_ac = np.squeeze(m_ac, 0)  # [action_dim]
+
+		# we directly use m_ac as output
+		# s_ac = self.sess.run(self.s_ac, feed_dict={self.m_obs: m, self.s_obs: s})  # [1, action_dim]
+		if self.discrete_ac:
+			# only for CartPole TODO
+			if m_ac < 0:
+				return 0
+			else:
+				return 1
+		return m_ac
+
+
+def optimize(self, m_obs=None, s_obs=None, pilco_return=None, action_choosen=None):
 		"""
 		optimize the policy, we take action_choosen as the mean action output from policy
 		"""
@@ -221,9 +244,9 @@ class Actor():
 
 		print("Now we begin the optimization for controller.")
 		batch_size = len(s_obs)
-		# assert len(s_obs) == batch_size
-		# assert len(action_choosen) == batch_size
-		# assert len(pilco_return) == batch_size
+		assert len(s_obs) == batch_size
+		assert len(action_choosen) == batch_size
+		assert len(pilco_return) == batch_size
 
 		# or we can concatenate m_obs, s_obs together for input
 		s_obs = np.reshape(s_obs, (batch_size, self.state_dim * self.state_dim))

@@ -162,7 +162,7 @@ class PILCO:
 
     def get_data(self, m_x, s_x, horizon, gamma=None):  # does not use gamma(discount factor) for now
         """
-        Get traning data for Controller
+        Get training data for Controller
         :param m_x: mean of init/start observation [1,dim_state]
         :param s_x: variance of init observation
         :return: lists of mean, variance of different observations, cumulative reward and action_choosen
