@@ -61,10 +61,10 @@ elif isinstance(env.action_space, Box):
 	discrete_ac = False
 
 # TODO
-X, Y, total_step, reward = rollout(random_policy, 40, discrete_ac)
+X, Y, total_step, reward = rollout(random_policy, 20, discrete_ac)
 
 for i in range(1, 3):
-	X_, Y_, step, reward = rollout(random_policy, 40, discrete_ac)
+	X_, Y_, step, reward = rollout(random_policy, 20, discrete_ac)
 	total_step += step
 	X = np.vstack((X, X_))
 	Y = np.vstack((Y, Y_))
@@ -74,7 +74,7 @@ for i in range(1, 3):
 RENDER = False
 learning_rate = 0.02
 reward_decay = 0.995
-max_episode = 5
+max_episode = 3
 # max_episode_step = 3000
 
 linear_controller = Actor(action_dim=action_dim, action_choice=action_choice, state_dim=state_dim, learning_rate=learning_rate, discrete_ac=discrete_ac)
@@ -86,13 +86,15 @@ total_episode = 3
 ep_step_list = []
 
 for rollouts in range(max_episode):
+	print("***" * 30)
 	print("the " + str(rollouts) + "th rollout begins.")
+	print("***" * 30)
 	# optimize GP
 	pilco.optimize_gp()
 	# the controller optimization
 	states = X[:, 0: state_dim]
 	print(states.shape[0])
-	pilco.optimize_controller(states, 30)
+	pilco.optimize_controller(states, 20)
 
 	# Here we use learned controller to sample data in env for GP optim, we can get the reward at the same time
 	# Q: should we use num of episode or num of step in env ?

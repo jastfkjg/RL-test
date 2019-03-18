@@ -67,8 +67,10 @@ class PILCO:
         # 1. random sample from the state_space
         # 2. random sample from the dataset
         start = time.time()
+        # s_x = np.random.rand(self.state_dim, self.state_dim) * 0.1
         s_x = np.diag(np.ones(self.state_dim) * 0.1)
-        for x in states:
+        for i, x in enumerate(states[:10]):
+            print("Evaluate the " + str(i) + "th init state, total init states: " + str(len(states[:10])))
             # self.predict(state, np.diag(np.ones(self.state_dim) * 0.1), horizon)
             m_x = np.expand_dims(x, 0)
             self.get_data(m_x, s_x, horizon)

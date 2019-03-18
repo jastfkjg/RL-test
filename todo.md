@@ -18,4 +18,8 @@
     
 6. action variance too big ? add regularization on loss
 
-7. discount factor gamma to add
+7. discount factor gamma to add in get_data()
+
+8. maybe add a critic network
+
+9. what if s_action is negative ?

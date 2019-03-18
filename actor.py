@@ -116,8 +116,8 @@ class Actor():
 		:return: the mean, variance of action, input-output covariance?
 		"""
 		# add noise to solve Cholesky decomposition prob
-		# batched_eye = np.eye(s.shape[0])
-		batched_eye = np.random.rand(s.shape[0], s.shape[0])
+		batched_eye = np.eye(s.shape[0])
+		# batched_eye = np.random.rand(s.shape[0], s.shape[0])
 		s_with_noise = s + 0.01 * batched_eye
 		dist_obs = self.tfd.MultivariateNormalFullCovariance(loc=m, covariance_matrix=s_with_noise)
 		states = dist_obs.sample([sample_num])   # [10, state_dim]
@@ -189,8 +189,7 @@ class Actor():
 		:return: the choosen action in gym env -- to handle discrete case ?
 		"""
 		m_ac, s_ac, _ = self.compute_action(m_x, s_x)
-		ac = self.sample_action(m_ac,
-								s_ac)  # a list of n num, n is the action dim, for discrete action space, we only need one
+		ac = self.sample_action(m_ac, s_ac)  # a list of n num, n is the action dim, for discrete action space, we only need one
 
 		if self.discrete_ac:
 			# only for CartPole, TODO
