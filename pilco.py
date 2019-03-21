@@ -4,10 +4,9 @@ import gpflow
 import pandas as pd
 import time
 
-from actor import Actor, LinearActor
+# from actor import Actor, LinearActor
 from mgpr import MGPR
 from smgpr import SMGPR
-# from .. import controllers
 import rewards
 
 # float64
@@ -34,7 +33,7 @@ class PILCO:
             self.controller = controller
 
         if reward is None:     # reward function
-            self.reward = rewards.Reward(self.state_dim)
+            self.reward = rewards.Reward()
         else:
             self.reward = reward
         
@@ -58,7 +57,7 @@ class PILCO:
         reward = self.predict(m_x, s_x, horizon)[2]
         return reward
 
-    def optimize_controller(self, states, horizon):
+    def optimize_controller(self, states, horizon, num_optim=8):
         """
         optimize controller's parameters
         :param: states: a array of init states
@@ -69,14 +68,14 @@ class PILCO:
         start = time.time()
         # s_x = np.random.rand(self.state_dim, self.state_dim) * 0.1
         s_x = np.diag(np.ones(self.state_dim) * 0.1)
-        for i, x in enumerate(states[:8]):
-            print("Evaluate the " + str(i) + "th init state, total init states: " + str(len(states[:8])))
+        for i, x in enumerate(states[:num_optim]):
+            print("Evaluate the " + str(i) + "th init state, total init states: " + str(len(states[:num_optim])))
             # self.predict(state, np.diag(np.ones(self.state_dim) * 0.1), horizon)
             m_x = np.expand_dims(x, 0)
             self.get_data(m_x, s_x, horizon)
             self.controller.optimize()
         end = time.time()
-        print("Finished with policy/controller optimization in %.1f seconds" % (end - start))
+        print("Finished with " + str(len(states[:num_optim])) + " times policy/controller optimizations in %.1f seconds" % (end - start))
 
     def optimize_gp(self):
         """
@@ -160,44 +159,79 @@ class PILCO:
         self.controller.store_transitions(m_x_init, s_x_init, reward)
         return m_x, s_x, reward  # mean, variance of state at timestep+n, cumulate reward in horizon
 
-    def get_data(self, m_x, s_x, horizon, gamma=None):  # does not use gamma(discount factor) for now
+    def get_data(self, m_x, s_x, horizon, gamma=1.0):  # does not use gamma(discount factor) for now
         """
         Get training data for Controller
-        :param m_x: mean of init/start observation [1,dim_state]
-        :param s_x: variance of init observation
+        :param m_x: mean of init/start observation [1, dim_state]
+        :param s_x: variance of init observation   [dim_state, dim_state]
         :return: lists of mean, variance of different observations, cumulative reward and action_choosen
         """
         ep_m_x, ep_s_x, ep_reward, ep_ac = [], [], [], []
 
+        # for i in range(horizon):
+        #     print("Collecting " + str(i) + "th fake data for controller optimization.")
+        #     # print(m_x, s_x, np.squeeze(m_x, 0), s_x.shape)
+        #     current_reward, done = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x)
+        #     print("m_state: ", m_x, "s_state: ", s_x)
+        #     print("reward for current state distribution: ", current_reward)
+        #     if done:
+        #         ep_reward = list(map(lambda x: x + current_reward, ep_reward))
+        #         break
+        #     else:
+        #         ep_m_x.append(np.squeeze(m_x, 0))
+        #         ep_s_x.append(s_x)
+        #         m_u, s_u, _ = self.controller.compute_action(np.squeeze(m_x, 0), s_x)
+        #         ac = self.controller.sample_action(m_u, s_u)
+        #         ep_ac.append(ac)
+        #         ep_reward = list(map(lambda x: x + current_reward, ep_reward))
+        #         ep_reward.append(current_reward)
+        #         m_x, s_x = self.propagate(m_x, s_x)
+        #         # to solve the "nan in array" prob
+        #         m_x[np.isnan(m_x)] = 0.
+        #         s_x[np.isnan(s_x)] = 0.
+        # self.controller.store_transition(ep_m_x, ep_s_x, ep_reward, ep_ac)
+
         for i in range(horizon):
+            discount_factor = gamma
             print("Collecting " + str(i) + "th fake data for controller optimization.")
-            # print(m_x, s_x, np.squeeze(m_x, 0), s_x.shape)
+            ep_m_x.append(np.squeeze(m_x, 0))
+            ep_s_x.append(s_x)
+            m_u, s_u, c_xu = self.controller.compute_action(np.squeeze(m_x, 0), s_x)
+            ac = self.controller.sample_action(m_u, s_u)
+            ep_ac.append(ac)
+            m_x, s_x = self.propagate(m_x, s_x, m_u, s_u, c_xu)
+            # solve the "nan in array" prob
+            m_x[np.isnan(m_x)] = 0.
+            s_x[np.isnan(s_x)] = 0.
+            # we need to change here if reward depends on action
             current_reward, done = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x)
             print("m_state: ", m_x, "s_state: ", s_x)
-            print("reward for current state distribution: ", current_reward)
+            print("reward for next state distribution: ", current_reward)
             if done:
-                ep_reward = list(map(lambda x: x + current_reward, ep_reward))
+                ep_reward.append(0.0)
                 break
             else:
-                ep_m_x.append(np.squeeze(m_x, 0))
-                ep_s_x.append(s_x)
-                m_u, s_u, _ = self.controller.compute_action(np.squeeze(m_x, 0), s_x)
-                ac = self.controller.sample_action(m_u, s_u)
-                ep_ac.append(ac)
-                ep_reward = list(map(lambda x: x + current_reward, ep_reward))
+                for n in range(len(ep_reward) - 1, -1, -1):
+                    ep_reward[n] += discount_factor * current_reward
+                    discount_factor *= gamma
                 ep_reward.append(current_reward)
-                m_x, s_x = self.propagate(m_x, s_x)
-                # to solve the "nan in array" prob
-                m_x[np.isnan(m_x)] = 0.
-                s_x[np.isnan(s_x)] = 0.
+
         self.controller.store_transition(ep_m_x, ep_s_x, ep_reward, ep_ac)
 
         return ep_m_x, ep_s_x, ep_reward
 
-    def propagate(self, m_x, s_x):
+    def propagate(self, m_x, s_x, m_u, s_u, c_xu):
+        """
+        :param m_x: mean of current state
+        :param s_x: variance of current state
+        :param m_u: mean of action
+        :param s_u: variance of action
+        :param c_xu: input-output covariance for controller
+        :return: mean and variance of next predict state
+        """
         # return mean and variance of next state
 
-        m_u, s_u, c_xu = self.controller.compute_action(np.squeeze(m_x, 0), s_x)   # m_x: mean of state, s_x: variance of state
+        # m_u, s_u, c_xu = self.controller.compute_action(np.squeeze(m_x, 0), s_x)   # m_x: mean of state, s_x: variance of state
         m_u = np.expand_dims(m_u, 0)
         # m_u.astype(float)
         # s_u.astype(float)

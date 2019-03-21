@@ -27,4 +27,8 @@
 10. Save/restore model(gp/actor) ?
 
 11. how to get states to train actor ? random sample: we should sample more states for those appear commonly.
+
+12. change take_action() for other discrete action space
+
+13. how does mgpr optimize: set_XY() ? should it contain old data ?
  

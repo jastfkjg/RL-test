@@ -1,6 +1,7 @@
 import numpy as np 
 import gym
 from pilco import PILCO
+from utils import save_pilco, load_pilco
 from actor import LinearActor, Actor 
 from rewards import CartPoleReward
 import pandas as pd
@@ -109,6 +110,7 @@ for rollouts in range(max_episode):
 	# X = np.vstack((X, X_new))
 	# Y = np.vstack((Y, Y_new))
 	X, Y = np.array(X_new), np.array(Y_new)
+
 	total_step += step
 	ep_step_list.append(total_step)
 	reward_list.append(reward)
@@ -122,6 +124,8 @@ for rollouts in range(max_episode):
 
 # save controller's weights
 pilco.controller.save_weights('./checkpoints/actor.ckpt')
+# save gp model and data
+save_pilco("./checkpoints/", X, Y, pilco)
 
 print("reward list: ", reward_list)
 
