@@ -63,7 +63,7 @@ class CartPoleReward(Reward):
         """
         :param m_state: mean of state        np.array
         :param s_state: variance of state    np.array
-        :return: the mean of the reward
+        :return: the mean of the reward, whether it's done
         """
         # m_x, m_x_dot, m_theta, m_theta_dot = m_state
         # s_x, s_x_dot, s_theta, s_theta_dot = s_state
@@ -95,7 +95,14 @@ class CartPoleReward(Reward):
         reward = integrate.quad(f, -20., 20., args=(m_state, s_state))[0]
         # too complicated to calculate
         # reward = integrate.nquad(f, [[-5., 5.], [-5., 5.], [-5., 5.], [-5., 5.]])[0]
-        return reward
+
+        # normally when we calculate gaussian reward, the expectation of result is always > 0.,
+        # if reward < 0.3, we consider it's done.
+        if reward < 0.3:
+            done = True
+        else:
+            done = False
+        return reward, done
 
 
 class ContinuousMountainCarReward(Reward):

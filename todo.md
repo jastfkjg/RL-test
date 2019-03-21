@@ -23,3 +23,8 @@
 8. maybe add a critic network
 
 9. what if s_action is negative ?
+
+10. Save/restore model(gp/actor) ?
+
+11. how to get states to train actor ? random sample: we should sample more states for those appear commonly.
+ 

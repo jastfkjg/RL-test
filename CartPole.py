@@ -45,7 +45,7 @@ def random_policy(x):
 def pilco_policy(x):
 	# policy in env
 	# return pilco.take_action(x)
-	return pilco.take_quick_action(x)
+	return pilco.controller.take_quick_action(x)
 
 
 if isinstance(env.observation_space, Discrete):
@@ -78,9 +78,9 @@ reward_decay = 0.995
 max_episode = 2
 # max_episode_step = 3000
 
-linear_controller = Actor(action_dim=action_dim, action_choice=action_choice, state_dim=state_dim, learning_rate=learning_rate, discrete_ac=discrete_ac)
+controller = Actor(action_dim=action_dim, action_choice=action_choice, state_dim=state_dim, learning_rate=learning_rate, discrete_ac=discrete_ac)
 cartpole_reward = CartPoleReward()  # consider to reset Reward function
-pilco = PILCO(X, Y, controller=linear_controller, reward=cartpole_reward)
+pilco = PILCO(X, Y, controller=controller, reward=cartpole_reward)
 
 reward_list = []
 total_episode = 3
@@ -99,7 +99,7 @@ for rollouts in range(max_episode):
 
 	# save controller's weights
 	print("saving the controller.")
-	pilco.controller.save_weights('./checkpoints/actor.pth')
+	pilco.controller.save_weights('./checkpoints/actor.ckpt')
 
 	# Here we use learned controller to sample data in env for GP optim, we can get the reward at the same time
 	# Q: should we use num of episode or num of step in env ?
@@ -121,11 +121,13 @@ for rollouts in range(max_episode):
 	pilco.mgpr.set_XY(X, Y)
 
 # save controller's weights
-pilco.controller.save_weights('./checkpoints/actor.pth')
+pilco.controller.save_weights('./checkpoints/actor.ckpt')
+
+print("reward list: ", reward_list)
 
 print("Finished !")
 plt.subplot(2, 2, 1)
-plt.plot(np.arange(len(total_episode)), reward_list)
+plt.plot(np.arange(3, total_episode), reward_list)
 plt.xlabel('Episode')
 plt.ylabel('Episode Reward')
 # plt.show()
@@ -165,7 +167,15 @@ for i_episode in range(test_episode):
 		observation = observation_next
 
 plt.subplot(2, 2, 3)
-plt.plot(np.arange(len(test_episode)), test_reward_list)
+plt.plot(np.arange(test_episode), test_reward_list)
 plt.xlabel('Test Episode')
 plt.ylabel('Test Episode Reward')
 plt.show()
+
+dataFrame = pd.DataFrame({'reward': reward_list})
+dataFrame.to_csv("./pilco_output/episode_reward.csv", index=True, sep=',')
+
+dataFrame2 = pd.DataFrame({'total_step': ep_step_list, 'reward': reward_list})
+dataFrame2.to_csv("./pilco_output/step_reward.csv", index=False, sep=',')
+
+

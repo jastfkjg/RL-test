@@ -7,19 +7,24 @@ tf.set_random_seed(1)
 
 class Actor():
 
-	def __init__(self, action_dim, action_choice, state_dim, learning_rate, discrete_ac=False):
+	def __init__(self, action_dim, action_choice, state_dim, learning_rate, hidden_size=10, discrete_ac=False):
 		self.action_dim = action_dim
 		self.action_choice = action_choice
 		self.state_dim = state_dim
 		self.learning_rate = learning_rate
 		self.discrete_ac = discrete_ac
+		self.hidden_size = hidden_size
 
 		self.ep_m_obs, self.ep_s_obs, self.ep_ac_choosen, self.ep_pilco_r = [], [], [], []
 
 		self.tfd = tfp.distributions
 
-		self.weight = tf.Variable(tf.random_normal([self.state_dim, self.action_dim], dtype=tf.float64))
-		self.bias = tf.Variable(tf.random_normal([self.action_dim], dtype=tf.float64))
+		self.weight1 = tf.Variable(tf.random_normal([self.state_dim * (self.state_dim + 1), self.hidden_size], dtype=tf.float64), name="fc1_weight")
+		self.bias1 = tf.Variable(tf.random_normal([self.hidden_size], dtype=tf.float64), name="fc1_bias")
+		self.weight2 = tf.Variable(tf.random_normal([self.hidden_size, self.action_dim], dtype=tf.float64), name="fc2_weight")
+		self.bias2 = tf.Variable(tf.random_normal([self.action_dim], dtype=tf.float64), name="fc2_bias")
+		self.weight3 = tf.Variable(tf.random_normal([self.hidden_size, self.action_dim], dtype=tf.float64), name="fc3_weight")
+		self.bias3 = tf.Variable(tf.random_normal([self.action_dim], dtype=tf.float64), name="fc3_bias")
 
 		self._build_net()
 
@@ -47,14 +52,22 @@ class Actor():
 		# How to choose the network architecture ? normally we have hidden size of 5, 10, 15 ?
 
 		# fc1
-		layer = tf.layers.dense(inputs=self.obs, units=10, activation=tf.nn.tanh,
-								kernel_initializer=tf.random_normal_initializer(mean=0, stddev=0.3),
-								bias_initializer=tf.constant_initializer(0.1), name='fc1')
-
+		layer = tf.add(tf.matmul(self.obs, self.weight1), self.bias1)
+		layer = tf.nn.tanh(layer)
 		# fc2
-		self.m_ac = tf.layers.dense(inputs=layer, units=self.action_dim, activation=None,
-								kernel_initializer=tf.random_normal_initializer(mean=0, stddev=0.3),
-								bias_initializer=tf.constant_initializer(0.1), name='fc2')
+		self.m_ac = tf.add(tf.matmul(layer, self.weight2), self.bias2)
+		# fc3
+		self.s_ac = tf.add(tf.matmul(layer, self.weight3), self.bias3)
+
+
+		# layer = tf.layers.dense(inputs=self.obs, units=10, activation=tf.nn.tanh,
+		# 						kernel_initializer=tf.random_normal_initializer(mean=0, stddev=0.3),
+		# 						bias_initializer=tf.constant_initializer(0.1), name='fc1')
+		#
+		# # fc2
+		# self.m_ac = tf.layers.dense(inputs=layer, units=self.action_dim, activation=None,
+		# 						kernel_initializer=tf.random_normal_initializer(mean=0, stddev=0.3),
+		# 						bias_initializer=tf.constant_initializer(0.1), name='fc2')
 
 		# self.all_act_prob = tf.nn.softmax(all_act, name="act_prob")
 
@@ -74,9 +87,9 @@ class Actor():
 		# 2. use a neural network with m_obs, s_obs as input, just like m_ac
 		# here we only output the diag values in s_ac
 
-		self.s_ac = tf.layers.dense(inputs=layer, units=self.action_dim, activation=None,
-								kernel_initializer=tf.random_normal_initializer(mean=0, stddev=0.3),
-								bias_initializer=tf.constant_initializer(0.1), name='fc3')
+		# self.s_ac = tf.layers.dense(inputs=layer, units=self.action_dim, activation=None,
+		# 						kernel_initializer=tf.random_normal_initializer(mean=0, stddev=0.3),
+		# 						bias_initializer=tf.constant_initializer(0.1), name='fc3')
 		# self.s_ac = tf.diag(self.s_ac) # what if s_ac: [None, action_dim]
 
 		# V: How to calculate input-output covariance
@@ -272,9 +285,13 @@ class Actor():
 		self.ep_pilco_r = pilco_return
 
 	def save_weights(self, path):
-		saver = tf.train.Saver()
+		saver = tf.train.Saver([self.weight1, self.weight2, self.weight3, self.bias1, self.bias2, self.bias3])
 		save_path = saver.save(self.sess, path)
 		print("model saved in file: %s" % save_path)
+
+	def load_weights(self, path):
+		saver = tf.train.Saver([self.weight1, self.weight2, self.weight3, self.bias1, self.bias2, self.bias3])
+		saver.restore(self.sess, path)
 
 
 class LinearActor():

@@ -148,9 +148,9 @@ class PILCO:
         reward = 0.0
         m_x_init, s_x_init = m_x, s_x
         for i in range(horizon):
-            current_reward = self.reward.compute_gaussian_reward(m_x, s_x)
+            current_reward, done = self.reward.compute_gaussian_reward(m_x, s_x)
             # check if the game is done
-            if current_reward <= 0.0:
+            if done:
                 reward = reward + pow(gamma, i) * current_reward
                 break
             else:
@@ -172,10 +172,10 @@ class PILCO:
         for i in range(horizon):
             print("Collecting " + str(i) + "th fake data for controller optimization.")
             # print(m_x, s_x, np.squeeze(m_x, 0), s_x.shape)
-            current_reward = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x)
+            current_reward, done = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x)
             print("m_state: ", m_x, "s_state: ", s_x)
             print("reward for current state distribution: ", current_reward)
-            if current_reward <= 0.0:
+            if done:
                 ep_reward = list(map(lambda x: x + current_reward, ep_reward))
                 break
             else:
