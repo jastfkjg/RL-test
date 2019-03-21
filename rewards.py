@@ -1,10 +1,17 @@
-
+import os
+from os import path
+import gym
 # import tensorflow as tf
 # from gpflow import Parameterized, Param, params_as_tensors, settings
 import numpy as np
 import scipy.integrate as integrate
 from scipy.stats import norm
 import math
+
+try:
+    import mujoco_py
+except:
+    print("you need to install mujoco_py")
 
 # float_type = settings.dtypes.float_type
 # class Reward(Parameterized):
@@ -90,6 +97,47 @@ class CartPoleReward(Reward):
         # reward = integrate.nquad(f, [[-5., 5.], [-5., 5.], [-5., 5.], [-5., 5.]])[0]
         return reward
 
+
+class ContinuousMountainCarReward(Reward):
+    def __init__(self):
+        super().__init__()
+        self.goal_position = 0.45
+
+    def compute_reward(self, state, action):
+        position = state[0]
+        done = bool(position >= self.goal_position)
+        reward = 0
+        if done:
+            reward = 100.0
+        reward -= math.pow(action[0], 2) * 0.1
+        return reward
+
+    def compute_gaussian_reward(self, m_state, s_state, m_action):
+        def f(u, m_state, s_state):
+            # proba = norm.pdf(u1, loc=0, scale=1) * norm.pdf(u2, 0, 1) * norm.pdf(u3, 0, 1) * norm.pdf(u4, 0, 1)
+            # sqrt_s = np.array(list(map(math.sqrt, s_state)))
+            proba = norm.pdf(u, loc=0, scale=1)
+            batched_eye = np.eye(s_state.shape[0])
+            try:
+                L = np.linalg.cholesky(s_state + 0.01 * batched_eye)
+            except np.linalg.linalg.LinAlgError:
+                print('matrix is singular.')
+                return 0.
+            u = np.array([u] * s_state.shape[0])
+            reward_density = proba * self.compute_reward(m_state + np.dot(L, u), m_action)
+            return reward_density
+
+        reward = integrate.quad(f, -20., 20., args=(m_state, s_state))[0]
+        # too complicated to calculate
+        # reward = integrate.nquad(f, [[-5., 5.], [-5., 5.], [-5., 5.], [-5., 5.]])[0]
+
+        # if reward > threshold: we may consider it's done ?
+        if reward > 60.0:
+            done = True
+        else:
+            done = False
+        return reward, done
+
 class PendulumReward(Reward):
     """
     Calculate reward for gym Pendulum env
@@ -99,30 +147,39 @@ class PendulumReward(Reward):
         super().__init__()
         self.max_torque = 2.
 
-    def compute_reward(self, u, state):
-
-        s = state
-        th, thdot = s
-        u = np.clip(u, -self.max_torque, self.max_torque)[0]
-        costs = self.angle_normalize(th) ** 2 + .1 * thdot ** 2 + .001 * (u ** 2)
+    def compute_reward(self, state, action):
+        th, thdot = state
+        action = np.clip(action, -self.max_torque, self.max_torque)[0]
+        costs = self.angle_normalize(th) ** 2 + .1 * thdot ** 2 + .001 * (action ** 2)
         return -costs
 
     def angle_normalize(self, x):
-        return (((x + np.pi) % (2 * np.pi)) - np.pi)
+        return ((x + np.pi) % (2 * np.pi)) - np.pi
 
-    def compute_gaussian_reward(self, m_state, s_state):
+    def compute_gaussian_reward(self, m_state, s_state, m_action):
         # the function to be integrated
-        def f(theta, theta_dot):
-            state = (theta, theta_dot)
-            prob_density = 1.0
-            for s, m_x, s_x in zip(state, m_state, s_state):
-                prob_density = prob_density * norm.pdf(s, loc=m_x, scale=s_x)
-            reward_density = prob_density * self.compute_reward(state)
+        def f(u, m_state, s_state):
+            # proba = norm.pdf(u1, loc=0, scale=1) * norm.pdf(u2, 0, 1) * norm.pdf(u3, 0, 1) * norm.pdf(u4, 0, 1)
+            # sqrt_s = np.array(list(map(math.sqrt, s_state)))
+            proba = norm.pdf(u, loc=0, scale=1)
+            batched_eye = np.eye(s_state.shape[0])
+            try:
+                L = np.linalg.cholesky(s_state + 0.01 * batched_eye)
+            except np.linalg.linalg.LinAlgError:
+                print('matrix is singular.')
+                return 0.
+            u = np.array([u] * s_state.shape[0])
+            reward_density = proba * self.compute_reward(m_state + np.dot(L, u), m_action)
             return reward_density
 
-        # reward = integrate.quad(, -np.inf, np.inf)    # quatruple
-        reward = integrate.nquad(f, [[-np.inf, np.inf], [-np.inf, np.inf]])[0]
-        return reward
+        reward = integrate.quad(f, -20., 20., args=(m_state, s_state))[0]
+        # too complicated to calculate
+        # reward = integrate.nquad(f, [[-5., 5.], [-5., 5.], [-5., 5.], [-5., 5.]])[0]
+
+        # never done
+        done = False
+
+        return reward, done
 
 class InvertedPendulumReward(Reward):
     """
@@ -140,18 +197,54 @@ class InvertedPendulumReward(Reward):
         else:
             return 1.0
 
-    def compute_gaussian_reward(self, m_state, s_state, state_dim):
-        # TODO
+    def compute_gaussian_reward(self, m_state, s_state):
+        def f(u, m_state, s_state):
+            # proba = norm.pdf(u1, loc=0, scale=1) * norm.pdf(u2, 0, 1) * norm.pdf(u3, 0, 1) * norm.pdf(u4, 0, 1)
+            # sqrt_s = np.array(list(map(math.sqrt, s_state)))
+            proba = norm.pdf(u, loc=0, scale=1)
+            batched_eye = np.eye(s_state.shape[0])
+            try:
+                L = np.linalg.cholesky(s_state + 0.01 * batched_eye)
+            except np.linalg.linalg.LinAlgError:
+                print('matrix is singular.')
+                return 0.
+            u = np.array([u] * s_state.shape[0])
+            reward_density = proba * self.compute_reward(m_state + np.dot(L, u))
+            return reward_density
 
-        def f(state):
-            prob_density = norm.pdf(state, loc=m_state, scale=s_state)
+        reward = integrate.quad(f, -20., 20., args=(m_state, s_state))[0]
+        # too complicated to calculate
+        # reward = integrate.nquad(f, [[-5., 5.], [-5., 5.], [-5., 5.], [-5., 5.]])[0]
+
+        # if expected reward < 0.4, we believe it's almost done
+        if reward < 0.4:
+            done = True
+        else:
+            done = False
+
+        return reward, done
 
 class HumanoidReward(Reward):
     # see https://github.com/openai/gym/blob/master/gym/envs/mujoco/humanoid.py
-    def __init__(self):
-        pass
+    def __init__(self, model_path):
+        super().__init__()
+        if model_path.startswith("/"):
+            fullpath = model_path
+        else:
+            fullpath = os.path.join(os.path.dirname(__file__), "assets", model_path)
+        if not path.exists(fullpath):
+            raise IOError("file %s does not exist" % fullpath)
 
-    def compute_reward(self, state):
+        self.model = mujoco_py.load_model_from_path(fullpath)
+        self.sim = mujoco_py.MjSim(self.model)
+
+    def mass_center(self, model, sim):
+        mass = np.expand_dims(model.body_mass, 1)
+        xpos = sim.data.xipos
+        return (np.sum(mass * xpos, 0) / np.sum(mass))[0]
+
+    def compute_reward(self, state, action):
+        pos_before = self.mass_center(self.model, self.sim)
         pass
 
     def mass_center(self, ):

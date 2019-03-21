@@ -227,8 +227,7 @@ class Actor():
 				return 1
 		return m_ac
 
-
-def optimize(self, m_obs=None, s_obs=None, pilco_return=None, action_choosen=None):
+	def optimize(self, m_obs=None, s_obs=None, pilco_return=None, action_choosen=None):
 		"""
 		optimize the policy, we take action_choosen as the mean action output from policy
 		"""
@@ -259,7 +258,6 @@ def optimize(self, m_obs=None, s_obs=None, pilco_return=None, action_choosen=Non
 		})
 
 		print("Controller optimization finished.")
-
 		# reset the episode record
 		self.ep_m_obs, self.ep_s_obs, self.ep_pilco_r, self.ep_ac_choosen = [], [], [], []
 
