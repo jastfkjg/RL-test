@@ -31,4 +31,6 @@
 12. change take_action() for other discrete action space
 
 13. how does mgpr optimize: set_XY() ? should it contain old data ?
+
+14. reward calculation ? 
  

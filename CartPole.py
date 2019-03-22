@@ -8,11 +8,11 @@ import pandas as pd
 import matplotlib.pyplot as plt 
 from gym.spaces import Discrete, Box
 
-np.random.seed(0)
+# np.random.seed(0)
 
 env = gym.make('CartPole-v1')
 
-def rollout(policy, timesteps, discrete_ac):
+def rollout(policy, timesteps, discrete_ac=False):
 	"""
 	get training data for GP to model the transition function
 	"""
@@ -63,14 +63,16 @@ elif isinstance(env.action_space, Box):
 	discrete_ac = False
 
 # TODO
-X, Y, total_step, reward = rollout(random_policy, 20, discrete_ac)
+X, Y, total_step, reward = rollout(random_policy, 40, discrete_ac)
 
 for i in range(1, 3):
-	X_, Y_, step, reward = rollout(random_policy, 20, discrete_ac)
+	X_, Y_, step, reward = rollout(random_policy, 40, discrete_ac)
 	total_step += step
 	X = np.vstack((X, X_))
 	Y = np.vstack((Y, Y_))
 
+# print("X: ", X)
+# print("Y: ", Y)
 
 # hyperparams
 RENDER = False
@@ -80,47 +82,61 @@ max_episode = 2
 # max_episode_step = 3000
 
 controller = Actor(action_dim=action_dim, action_choice=action_choice, state_dim=state_dim, learning_rate=learning_rate, discrete_ac=discrete_ac)
-cartpole_reward = CartPoleReward()  # consider to reset Reward function
-pilco = PILCO(X, Y, controller=controller, reward=cartpole_reward)
+# # load actor
+# try:
+# 	controller.load_weights('./checkpoints/actor.ckpt')
+# except:
+# 	print("do not find checkpoint.")
+# add how many optim steps for this actor model
+
+cartpole_reward = CartPoleReward()
+
+# load gp
+try:
+	pilco = load_pilco("./checkpoints/gp/", controller, cartpole_reward)
+except:
+	print("can not find saved gp models")
+	pilco = PILCO(X, Y, controller=controller, reward=cartpole_reward)
 
 reward_list = []
 total_episode = 3
 ep_step_list = []
+X_init = X[:, 0: state_dim]
 
 for rollouts in range(max_episode):
 	print("***" * 30)
 	print("the " + str(rollouts) + "th rollout begins.")
+	print("num optim: ", pilco.controller.get_num_optim())
 	print("***" * 30)
 	# optimize GP
 	pilco.optimize_gp()
+
 	# the controller optimization
-	states = X[:, 0: state_dim]
-	print(states.shape[0])
-	pilco.optimize_controller(states, 15)
+	# states = X[:, 0: state_dim]
+	# print(states.shape[0])
+	pilco.optimize_controller(X_init, 15, num_optim=20, gamma=reward_decay)
 
 	# save controller's weights
 	print("saving the controller.")
 	pilco.controller.save_weights('./checkpoints/actor.ckpt')
 
-	# Here we use learned controller to sample data in env for GP optim, we can get the reward at the same time
-	# Q: should we use num of episode or num of step in env ?
-
 	X_new, Y_new, step, reward = rollout(pilco_policy, 100, discrete_ac)
 	# update dataset, why update instead of replace
-	# X = np.vstack((X, X_new))
-	# Y = np.vstack((Y, Y_new))
-	X, Y = np.array(X_new), np.array(Y_new)
+	X = np.vstack((X, X_new))
+	Y = np.vstack((Y, Y_new))
+	pilco.mgpr.set_XY(X, Y)
+	X_init = np.array(X_new)[:, 0: state_dim]
 
 	total_step += step
 	ep_step_list.append(total_step)
 	reward_list.append(reward)
-	total_step += 1
+	total_episode += 1
 	# for i in range(1, 3):
 	# 	X_, Y_, step, reward = rollout(pilco_policy, 100, discrete_ac)
 	# 	X = np.vstack((X, X_))
 	# 	Y = np.vstack((Y, Y_))
 
-	pilco.mgpr.set_XY(X, Y)
+
 
 # save controller's weights
 pilco.controller.save_weights('./checkpoints/actor.ckpt')

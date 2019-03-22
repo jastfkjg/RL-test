@@ -57,7 +57,7 @@ class PILCO:
         reward = self.predict(m_x, s_x, horizon)[2]
         return reward
 
-    def optimize_controller(self, states, horizon, num_optim=8):
+    def optimize_controller(self, states, horizon, num_optim=8, gamma=1.):
         """
         optimize controller's parameters
         :param: states: a array of init states
@@ -72,7 +72,7 @@ class PILCO:
             print("Evaluate the " + str(i) + "th init state, total init states: " + str(len(states[:num_optim])))
             # self.predict(state, np.diag(np.ones(self.state_dim) * 0.1), horizon)
             m_x = np.expand_dims(x, 0)
-            self.get_data(m_x, s_x, horizon)
+            self.get_data(m_x, s_x, horizon, gamma=gamma)
             self.controller.optimize()
         end = time.time()
         print("Finished with " + str(len(states[:num_optim])) + " times policy/controller optimizations in %.1f seconds" % (end - start))
@@ -201,8 +201,8 @@ class PILCO:
             ep_ac.append(ac)
             m_x, s_x = self.propagate(m_x, s_x, m_u, s_u, c_xu)
             # solve the "nan in array" prob
-            m_x[np.isnan(m_x)] = 0.
-            s_x[np.isnan(s_x)] = 0.
+            # m_x[np.isnan(m_x)] = 0.01
+            # s_x[np.isnan(s_x)] = ?
             # we need to change here if reward depends on action
             current_reward, done = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x)
             print("m_state: ", m_x, "s_state: ", s_x)

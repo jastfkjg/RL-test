@@ -26,6 +26,9 @@ class Actor():
 		self.weight3 = tf.Variable(tf.random_normal([self.hidden_size, self.action_dim], dtype=tf.float64), name="fc3_weight")
 		self.bias3 = tf.Variable(tf.random_normal([self.action_dim], dtype=tf.float64), name="fc3_bias")
 
+		# num of optimizations already done
+		self.num_optim = tf.Variable(0)
+
 		self._build_net()
 
 		self.sess = tf.Session()
@@ -147,6 +150,9 @@ class Actor():
 		s_ac = np.squeeze(s_ac, 0)	  # [action_dim]
 
 		print("s action", s_ac)
+
+		# abs, s_ac should not be negative
+		s_ac = abs(s_ac)
 
 		# add noise to solve Cholesky decomposition prob
 		# batched_eye = np.eye(s_ac.shape[0])
@@ -271,8 +277,12 @@ class Actor():
 		})
 
 		print("Controller optimization finished.")
+		self.num_optim = tf.add(self.num_optim, 1)
 		# reset the episode record
 		self.ep_m_obs, self.ep_s_obs, self.ep_pilco_r, self.ep_ac_choosen = [], [], [], []
+
+	def get_num_optim(self):
+		return self.sess.run(self.num_optim)
 
 	def store_transition(self, m_obs, s_obs, pilco_return, action_choosen=None):
 		"""
@@ -285,12 +295,12 @@ class Actor():
 		self.ep_pilco_r = pilco_return
 
 	def save_weights(self, path):
-		saver = tf.train.Saver([self.weight1, self.weight2, self.weight3, self.bias1, self.bias2, self.bias3])
+		saver = tf.train.Saver([self.weight1, self.weight2, self.weight3, self.bias1, self.bias2, self.bias3, self.num_optim])
 		save_path = saver.save(self.sess, path)
 		print("model saved in file: %s" % save_path)
 
 	def load_weights(self, path):
-		saver = tf.train.Saver([self.weight1, self.weight2, self.weight3, self.bias1, self.bias2, self.bias3])
+		saver = tf.train.Saver([self.weight1, self.weight2, self.weight3, self.bias1, self.bias2, self.bias3, self.num_optim])
 		saver.restore(self.sess, path)
 
 
