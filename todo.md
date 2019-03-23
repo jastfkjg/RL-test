@@ -5,7 +5,7 @@
     - real data from env
     - fake data using PILCO
     
-    maybe we should store real data for further use
+    maybe we should store real data for further use -- in PILCO
     
 3. test actor in each/several iteration, then plot ---Done
 4. implement other model-free/model-based RL:
@@ -22,9 +22,9 @@
 
 8. maybe add a critic network
 
-9. what if s_action is negative ?
+9. what if s_action is negative ?  --Done
 
-10. Save/restore model(gp/actor) ?
+10. Save/restore model(gp/actor) ? --Done
 
 11. how to get states to train actor ? random sample: we should sample more states for those appear commonly.
 
@@ -32,5 +32,5 @@
 
 13. how does mgpr optimize: set_XY() ? should it contain old data ?
 
-14. reward calculation ? 
+14. reward calculation ? not accuracy, find another way to calculate ?
  

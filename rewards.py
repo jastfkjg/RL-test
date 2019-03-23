@@ -97,8 +97,8 @@ class CartPoleReward(Reward):
         # reward = integrate.nquad(f, [[-5., 5.], [-5., 5.], [-5., 5.], [-5., 5.]])[0]
 
         # normally when we calculate gaussian reward, the expectation of result is always > 0.,
-        # if reward < 0.3, we consider it's done.
-        if reward < 0.3:
+        # if reward < 0.2, we consider it's done.
+        if reward < 0.2:
             done = True
         else:
             done = False

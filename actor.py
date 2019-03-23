@@ -2,8 +2,8 @@ import numpy as np
 import tensorflow as tf 
 import tensorflow_probability as tfp 
 
-np.random.seed(1)
-tf.set_random_seed(1)
+# np.random.seed(1)
+# tf.set_random_seed(1)
 
 class Actor():
 
@@ -277,7 +277,7 @@ class Actor():
 		})
 
 		print("Controller optimization finished.")
-		self.num_optim = tf.add(self.num_optim, 1)
+		self.sess.run(self.num_optim.assign(self.num_optim + 1))
 		# reset the episode record
 		self.ep_m_obs, self.ep_s_obs, self.ep_pilco_r, self.ep_ac_choosen = [], [], [], []
 

@@ -68,14 +68,19 @@ class PILCO:
         start = time.time()
         # s_x = np.random.rand(self.state_dim, self.state_dim) * 0.1
         s_x = np.diag(np.ones(self.state_dim) * 0.1)
-        for i, x in enumerate(states[:num_optim]):
-            print("Evaluate the " + str(i) + "th init state, total init states: " + str(len(states[:num_optim])))
+        # we should random sample states or use all states
+        row = np.random.choice(states.shape[0], num_optim)
+        states = states[row, :]
+        for i, x in enumerate(states):
+            print("--" * 30)
+            print("Evaluate the " + str(i) + "th init state, total init states: " + str(num_optim))
+            print("--" * 30)
             # self.predict(state, np.diag(np.ones(self.state_dim) * 0.1), horizon)
             m_x = np.expand_dims(x, 0)
             self.get_data(m_x, s_x, horizon, gamma=gamma)
             self.controller.optimize()
         end = time.time()
-        print("Finished with " + str(len(states[:num_optim])) + " times policy/controller optimizations in %.1f seconds" % (end - start))
+        print("Finished with " + str(num_optim) + " times policy/controller optimizations in %.1f seconds" % (end - start))
 
     def optimize_gp(self):
         """

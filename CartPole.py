@@ -78,28 +78,32 @@ for i in range(1, 3):
 RENDER = False
 learning_rate = 0.02
 reward_decay = 0.995
-max_episode = 2
+max_episode = 4
 # max_episode_step = 3000
 
 controller = Actor(action_dim=action_dim, action_choice=action_choice, state_dim=state_dim, learning_rate=learning_rate, discrete_ac=discrete_ac)
 # # load actor
-# try:
-# 	controller.load_weights('./checkpoints/actor.ckpt')
-# except:
-# 	print("do not find checkpoint.")
+try:
+	controller.load_weights('./checkpoints/actor.ckpt')
+	print("load actor model successfully")
+except:
+	print("do not find checkpoint.")
 # add how many optim steps for this actor model
 
 cartpole_reward = CartPoleReward()
 
 # load gp
 try:
-	pilco = load_pilco("./checkpoints/gp/", controller, cartpole_reward)
+	pilco = load_pilco("./checkpoints/", controller, cartpole_reward)
+	print("load gp model successfully")
 except:
 	print("can not find saved gp models")
 	pilco = PILCO(X, Y, controller=controller, reward=cartpole_reward)
 
+print("num optim already: ", pilco.controller.get_num_optim())
+
 reward_list = []
-total_episode = 3
+total_episode = 2
 ep_step_list = []
 X_init = X[:, 0: state_dim]
 
@@ -114,7 +118,7 @@ for rollouts in range(max_episode):
 	# the controller optimization
 	# states = X[:, 0: state_dim]
 	# print(states.shape[0])
-	pilco.optimize_controller(X_init, 15, num_optim=20, gamma=reward_decay)
+	pilco.optimize_controller(X_init, 15, num_optim=10, gamma=reward_decay)
 
 	# save controller's weights
 	print("saving the controller.")
@@ -136,8 +140,6 @@ for rollouts in range(max_episode):
 	# 	X = np.vstack((X, X_))
 	# 	Y = np.vstack((Y, Y_))
 
-
-
 # save controller's weights
 pilco.controller.save_weights('./checkpoints/actor.ckpt')
 # save gp model and data
@@ -147,7 +149,7 @@ print("reward list: ", reward_list)
 
 print("Finished !")
 plt.subplot(2, 2, 1)
-plt.plot(np.arange(3, total_episode), reward_list)
+plt.plot(np.arange(3, total_episode + 1), reward_list)
 plt.xlabel('Episode')
 plt.ylabel('Episode Reward')
 # plt.show()

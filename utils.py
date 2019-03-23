@@ -21,7 +21,7 @@ def load_pilco(path, controller=None, reward=None, sparse=False):
     if not sparse:
         pilco = PILCO(X, Y, controller=controller, reward=reward)
     else:
-        with open(path+ 'n_ind.txt', 'r') as f:
+        with open(path + 'n_ind.txt', 'r') as f:
             n_ind = int(f.readline())
             f.close()
         pilco = PILCO(X, Y, num_induced_points=n_ind)
