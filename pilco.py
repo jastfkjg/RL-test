@@ -57,7 +57,7 @@ class PILCO:
         reward = self.predict(m_x, s_x, horizon)[2]
         return reward
 
-    def optimize_controller(self, states, horizon, num_optim=8, gamma=1.):
+    def optimize_controller(self, states, horizon, num_optim=8, num_collect=10, gamma=1.):
         """
         optimize controller's parameters
         :param: states: a array of init states
@@ -67,7 +67,10 @@ class PILCO:
         # 2. random sample from the dataset
         start = time.time()
         # s_x = np.random.rand(self.state_dim, self.state_dim) * 0.1
-        s_x = np.diag(np.ones(self.state_dim) * 0.1)
+        # s_x = np.diag(np.ones(self.state_dim) * 0.1)
+
+        # Pendulum-v0
+        s_x = np.diag([0.005, 0.03, 0.01])
         # we should random sample states or use all states
         row = np.random.choice(states.shape[0], num_optim)
         states = states[row, :]
@@ -77,7 +80,7 @@ class PILCO:
             print("--" * 30)
             # self.predict(state, np.diag(np.ones(self.state_dim) * 0.1), horizon)
             m_x = np.expand_dims(x, 0)
-            self.get_data(m_x, s_x, horizon, gamma=gamma)
+            self.get_data(m_x, s_x, horizon, num_collect=num_collect, gamma=gamma)
             self.controller.optimize()
         end = time.time()
         print("Finished with " + str(num_optim) + " times policy/controller optimizations in %.1f seconds" % (end - start))
@@ -164,11 +167,12 @@ class PILCO:
         self.controller.store_transitions(m_x_init, s_x_init, reward)
         return m_x, s_x, reward  # mean, variance of state at timestep+n, cumulate reward in horizon
 
-    def get_data(self, m_x, s_x, horizon, gamma=1.0):  # does not use gamma(discount factor) for now
+    def get_data(self, m_x, s_x, horizon, num_collect=10, gamma=1.0):  # does not use gamma(discount factor) for now
         """
         Get training data for Controller
         :param m_x: mean of init/start observation [1, dim_state]
         :param s_x: variance of init observation   [dim_state, dim_state]
+        :param num_collect: how many fake data: ep_m_x, ep_s_x, ep_reward, ep_ac are going to create
         :return: lists of mean, variance of different observations, cumulative reward and action_choosen
         """
         ep_m_x, ep_s_x, ep_reward, ep_ac = [], [], [], []
@@ -196,30 +200,46 @@ class PILCO:
         #         s_x[np.isnan(s_x)] = 0.
         # self.controller.store_transition(ep_m_x, ep_s_x, ep_reward, ep_ac)
 
-        for i in range(horizon):
-            discount_factor = gamma
+        # the expected reward for later states is much smaller than the init state
+        # we should keep all the data with same horizon
+        # or should we just generate one data with one real state
+
+        for i in range(horizon + num_collect):
+            if i <= num_collect:
+                discount_factor = gamma
+            else:
+                discount_factor = gamma ** (i - num_collect)
             print("Collecting " + str(i) + "th fake data for controller optimization.")
-            ep_m_x.append(np.squeeze(m_x, 0))
-            ep_s_x.append(s_x)
             m_u, s_u, c_xu = self.controller.compute_action(np.squeeze(m_x, 0), s_x)
             ac = self.controller.sample_action(m_u, s_u)
-            ep_ac.append(ac)
+            if len(ep_m_x) < num_collect:
+                ep_m_x.append(np.squeeze(m_x, 0))
+                ep_s_x.append(s_x)
+                ep_ac.append(ac)
             m_x, s_x = self.propagate(m_x, s_x, m_u, s_u, c_xu)
             # solve the "nan in array" prob
+            if np.isnan(m_x).any() or np.isnan(s_x).any():
+                print("array must not contain NaNs")
+                break
             # m_x[np.isnan(m_x)] = 0.01
             # s_x[np.isnan(s_x)] = ?
             # we need to change here if reward depends on action
-            current_reward, done = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x)
+            current_reward, done = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x, m_u)
+            # current_reward, done = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x)
             print("m_state: ", m_x, "s_state: ", s_x)
             print("reward for next state distribution: ", current_reward)
             if done:
-                ep_reward.append(0.0)
+                if len(ep_reward) < num_collect:
+                    ep_reward.append(0.0)
                 break
             else:
                 for n in range(len(ep_reward) - 1, -1, -1):
+                    if discount_factor < gamma ** horizon:
+                        break
                     ep_reward[n] += discount_factor * current_reward
                     discount_factor *= gamma
-                ep_reward.append(current_reward)
+                if len(ep_reward) < num_collect:
+                    ep_reward.append(current_reward)
 
         self.controller.store_transition(ep_m_x, ep_s_x, ep_reward, ep_ac)
 
@@ -234,30 +254,29 @@ class PILCO:
         :param c_xu: input-output covariance for controller
         :return: mean and variance of next predict state
         """
-        # return mean and variance of next state
 
         # m_u, s_u, c_xu = self.controller.compute_action(np.squeeze(m_x, 0), s_x)   # m_x: mean of state, s_x: variance of state
         m_u = np.expand_dims(m_u, 0)
-        # m_u.astype(float)
-        # s_u.astype(float)
-        # c_xu.astype(float)
-        # print(type(m_x[0]), type(m_u[0]))
 
         m = tf.concat([m_x, m_u], axis=1)
         s1 = tf.concat([s_x, s_x@c_xu], axis=1)
         s2 = tf.concat([tf.transpose(s_x@c_xu), s_u], axis=1)
         s = tf.concat([s1, s2], axis=0)
 
-        M_dx, S_dx, C_dx = self.mgpr.predict_on_noisy_inputs(m, s)  # M_dx: mean of dx, S_dx: variance of dx, C_dx:
+        print("m, s: ", m.eval(session=self.sess), s.eval(session=self.sess))
+
+        M_dx, S_dx, C_dx = self.mgpr.predict_on_noisy_inputs(m, s)  # M_dx: mean of dx, S_dx: variance of dx
+        print("M_dx, S_dx: ", M_dx.eval(session=self.sess), S_dx.eval(session=self.sess))
         M_x = M_dx + m_x
-        #TODO: cleanup the following line
+        # TODO: cleanup the following line
         S_x = S_dx + s_x + s1@C_dx + tf.matmul(C_dx, s1, transpose_a=True, transpose_b=True)   #(12) in PILCO paper
 
         # While-loop requires the shapes of the outputs to be fixed
-        M_x.set_shape([1, self.state_dim]); S_x.set_shape([self.state_dim, self.state_dim])
+        M_x.set_shape([1, self.state_dim])
+        S_x.set_shape([self.state_dim, self.state_dim])
 
         # M_x, S_x = self.sess.run([M_x, S_x])
         # M_x.eval()
         # S_x.eval()
 
-        return M_x.eval(session=self.sess), S_x.eval(session=self.sess)  # m_u is always the same(the max proba),should we rather use the sampled action ?
+        return M_x.eval(session=self.sess), S_x.eval(session=self.sess)

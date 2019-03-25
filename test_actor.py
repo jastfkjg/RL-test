@@ -4,8 +4,16 @@ import gym
 from actor import Actor
 import matplotlib.pyplot as plt
 from gym.spaces import Discrete, Box
+import argparse
 
-env = gym.make('CartPole-v1')
+parser = argparse.ArgumentParser()
+parser.add_argument("env_name", help="gym env name: classic control (CartPole-v1, MountainCarContinuous-v0, Pendulum-v0 ... )")
+
+args = parser.parse_args()
+
+model_path = './checkpoints/' + args.env_name + '/'
+
+env = gym.make(args.env_name)
 
 # hyperparams
 learning_rate = 0.02
@@ -27,7 +35,7 @@ elif isinstance(env.action_space, Box):
     discrete_ac = False
 
 controller = Actor(action_dim=action_dim, action_choice=action_choice, state_dim=state_dim, learning_rate=learning_rate, discrete_ac=discrete_ac)
-controller.load_weights('./checkpoints/actor.ckpt')
+controller.load_weights(model_path + 'actor.ckpt')
 
 test_episode = 100
 max_step = 200

@@ -7,7 +7,7 @@ import tensorflow_probability as tfp
 
 class Actor():
 
-	def __init__(self, action_dim, action_choice, state_dim, learning_rate, hidden_size=10, discrete_ac=False):
+	def __init__(self, action_dim, state_dim, learning_rate, action_choice=0, hidden_size=10, discrete_ac=False):
 		self.action_dim = action_dim
 		self.action_choice = action_choice
 		self.state_dim = state_dim
@@ -134,7 +134,7 @@ class Actor():
 		# add noise to solve Cholesky decomposition prob
 		batched_eye = np.eye(s.shape[0])
 		# batched_eye = np.random.rand(s.shape[0], s.shape[0])
-		s_with_noise = s + 0.01 * batched_eye
+		s_with_noise = s + 0.1 * batched_eye
 		dist_obs = self.tfd.MultivariateNormalFullCovariance(loc=m, covariance_matrix=s_with_noise)
 		states = dist_obs.sample([sample_num])   # [10, state_dim]
 
@@ -149,10 +149,9 @@ class Actor():
 		s_ac = self.sess.run(self.s_ac, feed_dict={self.m_obs: m, self.s_obs: s})  # [1, action_dim]
 		s_ac = np.squeeze(s_ac, 0)	  # [action_dim]
 
-		print("s action", s_ac)
-
 		# abs, s_ac should not be negative
 		s_ac = abs(s_ac)
+		print("s action", s_ac)
 
 		# add noise to solve Cholesky decomposition prob
 		# batched_eye = np.eye(s_ac.shape[0])
@@ -172,6 +171,7 @@ class Actor():
 		V = tf.matmul(states, actions) / sample_num - tf.matmul(m_obs, tf.expand_dims(m_ac, 0))
 
 		V = self.sess.run(V)
+		print(V)
 
 		# return the mean, variance of action; input-output covariance, the sample action ?
 		return m_ac, s_ac, V
@@ -240,10 +240,12 @@ class Actor():
 		# s_ac = self.sess.run(self.s_ac, feed_dict={self.m_obs: m, self.s_obs: s})  # [1, action_dim]
 		if self.discrete_ac:
 			# only for CartPole TODO
+			# we should find a better way to find action for discrete case
 			if m_ac < 0:
 				return 0
 			else:
 				return 1
+		# m_ac = np.reshape(m_ac, (1, ))
 		return m_ac
 
 	def optimize(self, m_obs=None, s_obs=None, pilco_return=None, action_choosen=None):

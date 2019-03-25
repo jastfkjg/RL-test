@@ -18,6 +18,8 @@ class MGPR(gpflow.Parameterized):
         for i in range(self.num_outputs):
             kern = gpflow.kernels.RBF(input_dim=X.shape[1], ARD=True)
             #TODO: Maybe fix noise for better conditioning
+            kern.lengthscales.prior = gpflow.priors.Gamma(1, 10)  # priors have to be included before
+            kern.variance.prior = gpflow.priors.Gamma(1.5, 2)  # before the model gets compiled
             self.models.append(gpflow.models.GPR(X, Y[:, i:i+1], kern))    # append the GPR model in self.models for each output dim
             self.models[i].clear(); self.models[i].compile()
 

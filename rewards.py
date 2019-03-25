@@ -154,8 +154,22 @@ class PendulumReward(Reward):
         super().__init__()
         self.max_torque = 2.
 
+    def clip(self, th):
+        if th > 1:
+            th = 1
+        elif th < -1:
+            th = -1
+        return th
+
     def compute_reward(self, state, action):
-        th, thdot = state
+        cos_th, sin_th, thdot = state
+        cos_th, sin_th = self.clip(cos_th), self.clip(sin_th)
+        # calculate th by cos_th and sin_th
+        # TODO
+        # print("cos:", cos_th)
+        th = np.arcsin(sin_th)
+        if np.cos(th) - cos_th > 0.01:
+            th = math.pi - th if sin_th >= 0 else -math.pi - th
         action = np.clip(action, -self.max_torque, self.max_torque)[0]
         costs = self.angle_normalize(th) ** 2 + .1 * thdot ** 2 + .001 * (action ** 2)
         return -costs
@@ -165,22 +179,29 @@ class PendulumReward(Reward):
 
     def compute_gaussian_reward(self, m_state, s_state, m_action):
         # the function to be integrated
-        def f(u, m_state, s_state):
+        batched_eye = np.eye(s_state.shape[0])
+        try:
+            L = np.linalg.cholesky(s_state + 0.01 * batched_eye)
+        except np.linalg.linalg.LinAlgError:
+            print("cholesky demcomposition failed. matrix is singular.")
+            return 0., True
+
+        def f(u):
             # proba = norm.pdf(u1, loc=0, scale=1) * norm.pdf(u2, 0, 1) * norm.pdf(u3, 0, 1) * norm.pdf(u4, 0, 1)
             # sqrt_s = np.array(list(map(math.sqrt, s_state)))
             proba = norm.pdf(u, loc=0, scale=1)
-            batched_eye = np.eye(s_state.shape[0])
-            try:
-                L = np.linalg.cholesky(s_state + 0.01 * batched_eye)
-            except np.linalg.linalg.LinAlgError:
-                print('matrix is singular.')
-                return 0.
+            # batched_eye = np.eye(s_state.shape[0])
+            # try:
+            #     L = np.linalg.cholesky(s_state + 0.01 * batched_eye)
+            # except np.linalg.linalg.LinAlgError:
+            #     print('matrix is singular.')
+            #     return 0.
             u = np.array([u] * s_state.shape[0])
             reward_density = proba * self.compute_reward(m_state + np.dot(L, u), m_action)
             return reward_density
 
-        reward = integrate.quad(f, -20., 20., args=(m_state, s_state))[0]
-        # too complicated to calculate
+        reward = integrate.quad(f, -20., 20.)[0]
+        # too complicated to calculate  , args=(m_state, s_state, m_action)
         # reward = integrate.nquad(f, [[-5., 5.], [-5., 5.], [-5., 5.], [-5., 5.]])[0]
 
         # never done
