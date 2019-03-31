@@ -241,6 +241,8 @@ class PILCO:
                 if len(ep_reward) < num_collect:
                     ep_reward.append(current_reward)
 
+        print("ep_m_x:", ep_m_x)
+
         self.controller.store_transition(ep_m_x, ep_s_x, ep_reward, ep_ac)
 
         return ep_m_x, ep_s_x, ep_reward
@@ -263,10 +265,10 @@ class PILCO:
         s2 = tf.concat([tf.transpose(s_x@c_xu), s_u], axis=1)
         s = tf.concat([s1, s2], axis=0)
 
-        print("m, s: ", m.eval(session=self.sess), s.eval(session=self.sess))
+        # print("m, s: ", m.eval(session=self.sess), s.eval(session=self.sess))
 
         M_dx, S_dx, C_dx = self.mgpr.predict_on_noisy_inputs(m, s)  # M_dx: mean of dx, S_dx: variance of dx
-        print("M_dx, S_dx: ", M_dx.eval(session=self.sess), S_dx.eval(session=self.sess))
+        # print("M_dx, S_dx: ", M_dx.eval(session=self.sess), S_dx.eval(session=self.sess))
         M_x = M_dx + m_x
         # TODO: cleanup the following line
         S_x = S_dx + s_x + s1@C_dx + tf.matmul(C_dx, s1, transpose_a=True, transpose_b=True)   #(12) in PILCO paper

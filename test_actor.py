@@ -34,7 +34,7 @@ elif isinstance(env.action_space, Box):
     action_dim = env.action_space.shape[0]
     discrete_ac = False
 
-controller = Actor(action_dim=action_dim, action_choice=action_choice, state_dim=state_dim, learning_rate=learning_rate, discrete_ac=discrete_ac)
+controller = Actor(action_dim=action_dim, state_dim=state_dim, learning_rate=learning_rate, discrete_ac=discrete_ac)
 controller.load_weights(model_path + 'actor.ckpt')
 
 test_episode = 100

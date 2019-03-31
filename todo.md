@@ -36,5 +36,7 @@
 
 15. discrete case: transition model does not receives the same (training compare with prediction)
 
-16. np.nan when calculate M_dx, S_dx ? 
+16. np.nan when calculate M_dx, S_dx ?
+
+17. replay buffer. 
  
