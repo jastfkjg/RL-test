@@ -117,13 +117,12 @@ class ActorCritic:
         self.action_dim = action_dim
         self.state_dim = state_dim
         self.lr = lr
-        self.actor_lr = actor_lr
-        self.critic_lr = critic_lr
+        # self.actor_lr = actor_lr
+        # self.critic_lr = critic_lr
         self.gamma = reward_decay
         self.output_graph = output_graph
 
         self.build_actor()
-        self.build_critic()
 
         self.sess = tf.Session()
         self.sess.run(tf.global_variables_initializer())
@@ -187,6 +186,10 @@ class ActorCritic:
             td_map = {self.}
 
             self.sess.run(self.train_op, feed_dict={self.target: target})
+
+        self.choose_action = choose_action
+        self.learn = learn
+
 
     def save_model(self, path):
         # save model weights

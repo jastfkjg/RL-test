@@ -2,29 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="3b30b2db-e047-44a6-80b7-1fd611166f92" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/A2C/a2c.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/A2C/policies.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/A2C/run.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/A2C/runner.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/checkpoints/Pendulum-v0/X.csv" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/checkpoints/Pendulum-v0/Y.csv" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/checkpoints/Pendulum-v0/model_0.npy" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/checkpoints/Pendulum-v0/model_1.npy" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/checkpoints/Pendulum-v0/model_2.npy" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/distributions.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/pilco_output/images/Pendulum-15.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/pilco_output/images/Pendulum_test_actor_15.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/actor.py" beforeDir="false" afterPath="$PROJECT_DIR$/actor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/Pendulum-v0/actor.ckpt.data-00000-of-00001" beforeDir="false" afterPath="$PROJECT_DIR$/checkpoints/Pendulum-v0/actor.ckpt.data-00000-of-00001" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/Pendulum-v0/actor.ckpt.index" beforeDir="false" afterPath="$PROJECT_DIR$/checkpoints/Pendulum-v0/actor.ckpt.index" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/checkpoints/Pendulum-v0/actor.ckpt.meta" beforeDir="false" afterPath="$PROJECT_DIR$/checkpoints/Pendulum-v0/actor.ckpt.meta" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mgpr.py" beforeDir="false" afterPath="$PROJECT_DIR$/mgpr.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pilco.py" beforeDir="false" afterPath="$PROJECT_DIR$/pilco.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/policy_gradient.py" beforeDir="false" afterPath="$PROJECT_DIR$/policy_gradient.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/run_pg.py" beforeDir="false" afterPath="$PROJECT_DIR$/run_pg.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_actor.py" beforeDir="false" afterPath="$PROJECT_DIR$/test_actor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/todo.md" beforeDir="false" afterPath="$PROJECT_DIR$/todo.md" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -94,8 +72,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/policy_gradient.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="390">
-              <caret line="26" lean-forward="true" selection-start-line="26" selection-end-line="26" />
+            <state relative-caret-position="260">
+              <caret line="124" column="26" lean-forward="true" selection-start-line="124" selection-start-column="26" selection-end-line="124" selection-end-column="26" />
               <folding>
                 <element signature="e#0#18#0" expanded="true" />
               </folding>
@@ -319,7 +297,7 @@
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" weight="0.32729805" />
-      <window_info anchor="bottom" id="Run" order="2" visible="true" weight="0.22423398" />
+      <window_info anchor="bottom" id="Run" order="2" weight="0.22423398" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.5626741" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
@@ -505,8 +483,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/policy_gradient.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="390">
-          <caret line="26" lean-forward="true" selection-start-line="26" selection-end-line="26" />
+        <state relative-caret-position="260">
+          <caret line="124" column="26" lean-forward="true" selection-start-line="124" selection-start-column="26" selection-end-line="124" selection-end-column="26" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
           </folding>
