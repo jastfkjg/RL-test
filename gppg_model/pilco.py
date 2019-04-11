@@ -57,7 +57,7 @@ class PILCO:
         reward = self.predict(m_x, s_x, horizon)[2]
         return reward
 
-    def optimize_controller(self, states, horizon, num_optim=8, num_collect=10, gamma=1.):
+    def optimize_controller(self, states, horizon, num_optim=None, num_collect=10, gamma=1.):
         """
         optimize controller's parameters
         :param: states: a array of init states
@@ -68,6 +68,8 @@ class PILCO:
         start = time.time()
         # s_x = np.random.rand(self.state_dim, self.state_dim) * 0.1
         # s_x = np.diag(np.ones(self.state_dim) * 0.1)
+        if num_optim == None:
+            num_optim = states.shape[0]
 
         # Pendulum-v0
         s_x = np.diag([0.005, 0.03, 0.01])
@@ -226,7 +228,7 @@ class PILCO:
             # we need to change here if reward depends on action
             current_reward, done = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x, m_u)
             # current_reward, done = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x)
-            print("m_state: ", m_x, "s_state: ", s_x)
+            # print("m_state: ", m_x, "s_state: ", s_x)
             print("reward for next state distribution: ", current_reward)
             if done:
                 if len(ep_reward) < num_collect:

@@ -138,7 +138,7 @@ class Actor():
         try:
             dist_obs = self.tfd.MultivariateNormalFullCovariance(loc=m, covariance_matrix=s_with_noise)
         except:
-            print("Cholesky decomposition failed.")
+            print("Cholesky decomposition failed. In this case, we only take diag element of obs variance")
             dist_obs = self.tfd.MultivariateNormalDiag(loc=m, scale_diag=np.diag(s))
         states = dist_obs.sample([sample_num])   # [10, state_dim]
 
@@ -147,7 +147,7 @@ class Actor():
         s = np.reshape(s, (1, self.state_dim * self.state_dim))
         # obs = np.concatenate((m, s), 1)
         m_ac = self.sess.run(self.m_ac, feed_dict={self.m_obs: m, self.s_obs: s})  # [1, action_dim] ? [1, 4, 1]
-        print("m action", m_ac)
+        # print("m action", m_ac)
         m_ac = np.squeeze(m_ac, 0)     # [action_dim]
 
         s_ac = self.sess.run(self.s_ac, feed_dict={self.m_obs: m, self.s_obs: s})  # [1, action_dim]
@@ -155,7 +155,7 @@ class Actor():
 
         # abs, s_ac should not be negative
         s_ac = abs(s_ac)
-        print("s action", s_ac)
+        # print("s action", s_ac)
 
         # add noise to solve Cholesky decomposition prob
         # batched_eye = np.eye(s_ac.shape[0])
@@ -175,7 +175,7 @@ class Actor():
         V = tf.matmul(states, actions) / sample_num - tf.matmul(m_obs, tf.expand_dims(m_ac, 0))
 
         V = self.sess.run(V)
-        print(V)
+        # print(V)
 
         # return the mean, variance of action; input-output covariance, the sample action ?
         return m_ac, s_ac, V

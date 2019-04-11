@@ -9,10 +9,12 @@ from gym.spaces import Discrete, Box
 render = False
 learning_rate = 0.02
 reward_decay = 0.995
-max_episode = 200
-max_episode_step = 1000
+max_episode = 300
+max_episode_step = 2000
 
-env = gym.make('CartPole-v0')
+# AirRaid-ram-v0: action(discrete: 6), obs(box)
+# Alien-ram-vo: action(discrete: 18), obs(box)
+env = gym.make('AirRaid-ram-v0') 
 env.seed(1)
 env = env.unwrapped
 
@@ -28,10 +30,13 @@ elif isinstance(env.observation_space, Box):
 
 if isinstance(env.action_space, Discrete):
     A_DIM = env.action_space.n
+    discrete_ac = True
 elif isinstance(env.action_space, Box):
     A_DIM = env.action_space.shape[0]
+    discrete_ac = False
 
-policy = PolicyGradient(action_dim=A_DIM, state_dim=S_DIM, learning_rate=learning_rate, reward_decay=reward_decay)
+policy = PolicyGradient(action_dim=A_DIM, state_dim=S_DIM, learning_rate=learning_rate,
+        reward_decay=reward_decay, discrete_ac=discrete_ac)
 
 total_step = 0
 all_ep_r = []
@@ -72,7 +77,7 @@ for i_episode in range(max_episode):
         # update observation
         observation = observation_next
 
-policy.save_model('./PG/CartPole/policy.ckpt')
+policy.save_model('./checkpoints/pg_policy.ckpt')
 
 print("Finished")
 plt.plot(np.arange(len(all_ep_r)), all_ep_r)

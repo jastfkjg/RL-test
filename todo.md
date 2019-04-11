@@ -39,4 +39,6 @@
 16. np.nan when calculate M_dx, S_dx ?
 
 17. replay buffer. 
- 
+
+18. for each step in real env, we can use this step to optimize our actor. and we can test actor's 
+performance every k steps 

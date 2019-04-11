@@ -1,5 +1,6 @@
 import numpy as np 
-import tensorflow as tf 
+import tensorflow as tf
+from tensorflow import losses
 
 from distributions import DiagGaussianPd
 
@@ -18,6 +19,8 @@ class PolicyGradient(object):
 
         self.ep_obs, self.ep_as, self.ep_rs = [], [], []
 
+        tf.reset_default_graph()
+
         self._build_net()
 
         self.sess = tf.Session()
@@ -30,7 +33,7 @@ class PolicyGradient(object):
     def _build_net(self):
         with tf.name_scope("PG_inputs"):
             self.tf_obs = tf.placeholder(tf.float32, [None, self.state_dim], name="observations")
-            self.tf_acts = tf.placeholder(tf.int32, [None, ], name="actions_num")
+            self.tf_acts = tf.placeholder(tf.int32, [None, ], name="actions")
             self.tf_vt = tf.placeholder(tf.float32, [None, ], name="actions_value")
 
         # fc1
@@ -39,15 +42,15 @@ class PolicyGradient(object):
             bias_initializer=tf.constant_initializer(0.1), name='fc1')
 
         # fc2
-        all_act = tf.layers.dense(inputs=layer, units=self.action_dim, activation=None,
+        self.all_act = tf.layers.dense(inputs=layer, units=self.action_dim, activation=None,
             kernel_initializer=tf.random_normal_initializer(mean=0, stddev=0.3),
             bias_initializer=tf.constant_initializer(0.1), name='fc2')
 
-        self.all_act_prob = tf.nn.softmax(all_act, name="act_prob")
+        self.all_act_prob = tf.nn.softmax(self.all_act, name="act_prob")
 
         with tf.name_scope('PG_loss'):
             # to maximize total reward (log(pi)*R) is to minimize -(log(pi)*R)
-            neg_log_prob = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=all_act, labels=self.tf_acts)
+            neg_log_prob = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.all_act, labels=self.tf_acts)
             # or
             # neg_log_prob = tf.reduce_sum(-tf.log(self.all_act_prob)*tf.one_hot(self.tf_acts, self.n_actions), axis=1)
             loss = tf.reduce_mean(neg_log_prob * self.tf_vt)
@@ -59,6 +62,7 @@ class PolicyGradient(object):
 
         if self.discrete_ac:
             prob_weights = self.sess.run(self.all_act_prob, feed_dict={self.tf_obs: observation[np.newaxis, :]})
+            # print("proba:", prob_weights)
             action = np.random.choice(range(prob_weights.shape[1]), p=prob_weights.ravel())
         else:
 
@@ -78,8 +82,8 @@ class PolicyGradient(object):
 
         # train on episode
         self.sess.run(self.train_op, feed_dict={
-            self.tf_obs: np.vstack(self.ep_obs),  # shape=[None, n_obs]
-            self.tf_acts: np.vstack(self.ep_as),  # shape=[None, ]
+            self.tf_obs: self.ep_obs,  # shape=[None, n_obs]
+            self.tf_acts: self.ep_as,  # shape=[None, ]
             self.tf_vt: discounted_ep_rs_norm,    # shape=[None, ]
             })
 
@@ -98,7 +102,8 @@ class PolicyGradient(object):
 
         # normalize episode rewards
         discounted_ep_rs -= np.mean(discounted_ep_rs)
-        discounted_ep_rs /= np.std(discounted_ep_rs)
+        if np.std(discounted_ep_rs) != 0:
+            discounted_ep_rs /= np.std(discounted_ep_rs)
         return discounted_ep_rs
 
     def save_model(self, path):
@@ -113,16 +118,18 @@ class PolicyGradient(object):
         print("model load successfully.")
 
 class ActorCritic:
-    def __init__(self, action_dim, state_dim,lr=0.001,  actor_lr=0.001, critic_lr=0.005, reward_decay=0.95, output_graph=False):
+    def __init__(self, action_dim, state_dim,lr=0.001, ent_coef=0.01, value_coef=0.5, reward_decay=0.95, output_graph=False):
         self.action_dim = action_dim
         self.state_dim = state_dim
         self.lr = lr
+        self.ent_coef = ent_coef
+        self.value_coef = value_coef
         # self.actor_lr = actor_lr
         # self.critic_lr = critic_lr
         self.gamma = reward_decay
         self.output_graph = output_graph
 
-        self.build_actor()
+        tf.reset_default_graph()
 
         self.sess = tf.Session()
         self.sess.run(tf.global_variables_initializer())
@@ -130,7 +137,7 @@ class ActorCritic:
         if output_graph:
             tf.summary.FileWriter("logs/", self.sess.graph)
 
-    def build_actor(self):
+    
         with tf.name_scope("inputs"):
             self.tf_obs = tf.placeholder(tf.float32, [None, self.state_dim], name="observations")
             self.tf_ac = tf.placeholder(tf.float32, [None, self.action_dim], name="actions")
@@ -148,33 +155,33 @@ class ActorCritic:
         
         logstd_act = tf.get_variable(name="logstd", shape=[1, self.action_dim],
                 initializer=tf.zeros_initializer())
-        pdparam = tf.concat([mean_all_act, mean_all_act * 0.0 + logstd_act],
-                axis=1)
+        pdparam = tf.concat([mean_all_act, mean_all_act * 0.0 + logstd_act], axis=1)
         self.pd = DiagGaussianPd(pdparam)
 
         self.action = self.pd.sample()
         self.neglogp = self.pd.neglogp(self.action)
         
-        self.value = tf.layers.dense(input=layer, units=1, activation=None,
+        # for critic network, we share the first layer with actor
+        value = tf.layers.dense(input=layer, units=1, activation=None,
                                 kernel_initializer=tf.random_normal_initializer(mean=0, stddev=0.3),
                                 bias_initializer=tf.constant_initializer(0.1), name="critic_fc2")
 
         with tf.name_scope("Loss"):
             # Total loss = Policy loss - entropy * ent_coef + value loss * value_coef
             pg_loss = tf.reduce_mean(self.advantage * self.neglogp)
-            value_loss = losses.mean_squared_error(tf.squeeze(self.value,
-                self.R))
+            value_loss = losses.mean_squared_error(tf.squeeze(value, self.R))
             entropy = tf.reduce_mean(self.pd.entropy())
             
             # total loss
-            loss = pg_loss - entropy * ent_coef + value_loss * value_coef
+            loss = pg_loss - entropy * self.ent_coef + value_loss * self.value_coef
             
         with tf.name_scope("Train"):
-            self.train_op = tf.train.AdamOptimizer(self.lr).minimize(loss)
+            train_op = tf.train.AdamOptimizer(self.lr).minimize(loss)
 
 
-        def choose_action(self, state):
-            self.action = self.pd.sample()
+        def step(self, observation):
+            action = self.sess.run(self.action, feed_dict={self.tf_obs: observation[np.newaxis, :]})
+            return action
 
 
         def learn(self, obs, actions, rewards, values):
@@ -183,11 +190,15 @@ class ActorCritic:
             advs = rewards - values
             # value = self.sess.run(self.value, feed_dict={self.obs: state})
 
-            td_map = {self.}
+            td_map = {self.tf_obs: obs, self.tf_ac: actions, self.advantage: advs, self.R: rewards}
 
-            self.sess.run(self.train_op, feed_dict={self.target: target})
+            policy_loss, value_loss, policy_entropy, _ = self.sess.run(
+                    [pg_loss, value_loss, entropy, train_op],
+                    feed_dict=td_map
+                    )
+            return policy_loss, value_loss, policy_entropy
 
-        self.choose_action = choose_action
+        self.step = step
         self.learn = learn
 
 

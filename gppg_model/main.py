@@ -87,6 +87,8 @@ for i in range(1, 3):
 	X = np.vstack((X, X_))
 	Y = np.vstack((Y, Y_))
 
+# we have here normally <40*3=120 dat.shape[0]a
+
 # print("X: ", X)
 # print("Y: ", Y)
 
@@ -94,7 +96,13 @@ for i in range(1, 3):
 RENDER = False
 learning_rate = 0.02
 reward_decay = 0.995
-max_episode = 2
+max_episode = 20
+# num_optim: how many real states to use as init state, default: None(use all real states)
+num_optim = 40
+# num_collect: how many fake data are we going to create in a batch (batch num) to optimize actor
+num_collect = 10
+# optim horizon: the horizon to calculate expected reward
+optim_horizon = 20
 # max_episode_step = 3000
 
 controller = Actor(action_dim=action_dim, state_dim=state_dim, learning_rate=learning_rate, discrete_ac=discrete_ac)
@@ -104,10 +112,9 @@ try:
 	print("load actor model successfully")
 except:
 	print("can not find checkpoint.")
-# add how many optim steps for this actor model
 
+# TODO
 if args.env_name == 'CartPole-v1':
-
 	env_reward = CartPoleReward()
 elif args.env_name == 'Pendulum-v0':
 	env_reward = PendulumReward()
@@ -143,7 +150,7 @@ for rollouts in range(max_episode):
 	# the controller optimization
 	# states = X[:, 0: state_dim]
 	# print(states.shape[0])
-	pilco.optimize_controller(X_init, 10, num_optim=5, gamma=reward_decay)
+	pilco.optimize_controller(X_init, optim_horizon, num_optim=num_optim, num_collect=num_collect, gamma=reward_decay)
 
 	# save controller's weights
 	print("saving the controller.")
@@ -160,10 +167,6 @@ for rollouts in range(max_episode):
 	ep_step_list.append(total_step)
 	reward_list.append(reward)
 	total_episode += 1
-	# for i in range(1, 3):
-	# 	X_, Y_, step, reward = rollout(pilco_policy, 100, discrete_ac)
-	# 	X = np.vstack((X, X_))
-	# 	Y = np.vstack((Y, Y_))
 
 # save controller's weights
 pilco.controller.save_weights(model_path + 'actor.ckpt')
@@ -174,7 +177,7 @@ print("reward list: ", reward_list)
 
 print("Finished !")
 plt.subplot(2, 2, 1)
-plt.plot(np.arange(3, total_episode + 1), reward_list)
+plt.plot(np.arange(1, len(reward_list)+1), reward_list)
 plt.xlabel('Episode')
 plt.ylabel('Episode Reward')
 # plt.show()
