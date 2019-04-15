@@ -267,10 +267,10 @@ class Actor():
             pilco_return = self.ep_pilco_r
 
         print("Now we begin the optimization for controller.")
-        batch_size = len(m_obs)
-        s_obs = s_obs[:batch_size + 1]
-        action_choosen = action_choosen[:batch_size + 1]
-        pilco_return = pilco_return[:batch_size + 1]
+        batch_size = min(len(m_obs), len(s_obs), len(action_choosen), len(pilco_return))
+        s_obs = s_obs[:batch_size]
+        action_choosen = action_choosen[:batch_size]
+        pilco_return = pilco_return[:batch_size]
         # assert len(s_obs) == batch_size
         # assert len(action_choosen) == batch_size
         # assert len(pilco_return) == batch_size

@@ -2,16 +2,31 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="3b30b2db-e047-44a6-80b7-1fd611166f92" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/MF_models/PG_ac_box.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/MF_models/A2C/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/MF_models/PG/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/MF_models/PG/run.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/MF_models/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/MF_models/.plot_util.py.swp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/MF_models/.policy_gradient.py.swp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/MF_models/.run_pg.py.swp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/MF_models/.runner.py.swp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/MF_models/A2C/run.py" beforeDir="false" afterPath="$PROJECT_DIR$/MF_models/A2C/run.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/MF_models/A2C/runner.py" beforeDir="false" afterPath="$PROJECT_DIR$/MF_models/A2C/runner.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/MF_models/PG_ac_box.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/MF_models/checkpoints/checkpoint" beforeDir="false" afterPath="$PROJECT_DIR$/MF_models/checkpoints/checkpoint" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/MF_models/distributions.py" beforeDir="false" afterPath="$PROJECT_DIR$/MF_models/distributions.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/MF_models/policy_gradient.py" beforeDir="false" afterPath="$PROJECT_DIR$/MF_models/policy_gradient.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/MF_models/run_pg.py" beforeDir="false" afterPath="$PROJECT_DIR$/MF_models/run_pg.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/MF_models/episode_reward.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/MF_models/policy_gradient.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/MF_models/run_pg.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/MF_models/runner.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/MF_models/step_reward.csv" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/gppg_model/actor.py" beforeDir="false" afterPath="$PROJECT_DIR$/gppg_model/actor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gppg_model/checkpoints/Pendulum-v0/actor.ckpt.data-00000-of-00001" beforeDir="false" afterPath="$PROJECT_DIR$/gppg_model/checkpoints/Pendulum-v0/actor.ckpt.data-00000-of-00001" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gppg_model/checkpoints/Pendulum-v0/actor.ckpt.index" beforeDir="false" afterPath="$PROJECT_DIR$/gppg_model/checkpoints/Pendulum-v0/actor.ckpt.index" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gppg_model/checkpoints/Pendulum-v0/actor.ckpt.meta" beforeDir="false" afterPath="$PROJECT_DIR$/gppg_model/checkpoints/Pendulum-v0/actor.ckpt.meta" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/gppg_model/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/gppg_model/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gppg_model/pilco.py" beforeDir="false" afterPath="$PROJECT_DIR$/gppg_model/pilco.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/todo.md" beforeDir="false" afterPath="$PROJECT_DIR$/todo.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gppg_model/rewards.py" beforeDir="false" afterPath="$PROJECT_DIR$/gppg_model/rewards.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -22,22 +37,10 @@
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/todo.md">
-          <provider selected="true" editor-type-id="split-provider[text-editor;markdown-preview-editor]">
-            <state split_layout="SPLIT">
-              <first_editor relative-caret-position="250">
-                <caret line="43" column="26" lean-forward="true" selection-start-line="43" selection-start-column="26" selection-end-line="43" selection-end-column="26" />
-              </first_editor>
-              <second_editor />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/gppg_model/main.py">
+        <entry file="file://$PROJECT_DIR$/MF_models/PG/runner.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1725">
-              <caret line="115" column="6" lean-forward="true" selection-start-line="115" selection-start-column="6" selection-end-line="115" selection-end-column="6" />
+            <state relative-caret-position="659">
+              <caret line="58" column="14" selection-start-line="58" selection-start-column="14" selection-end-line="58" selection-end-column="14" />
               <folding>
                 <element signature="e#0#18#0" expanded="true" />
               </folding>
@@ -46,13 +49,10 @@
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/gppg_model/pilco.py">
+        <entry file="file://$PROJECT_DIR$/MF_models/__init__.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="338">
-              <caret line="232" column="20" lean-forward="true" selection-start-line="232" selection-start-column="20" selection-end-line="232" selection-end-column="20" />
-              <folding>
-                <element signature="e#0#18#0" expanded="true" />
-              </folding>
+            <state relative-caret-position="30">
+              <caret line="2" column="2" selection-start-line="2" selection-start-column="2" selection-end-line="2" selection-end-column="2" />
             </state>
           </provider>
         </entry>
@@ -60,8 +60,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/gppg_model/actor.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="289">
-              <caret line="277" column="63" lean-forward="true" selection-start-line="277" selection-start-column="63" selection-end-line="277" selection-end-column="63" />
+            <state relative-caret-position="1842">
+              <caret line="269" column="88" selection-start-line="269" selection-start-column="88" selection-end-line="269" selection-end-column="88" />
               <folding>
                 <element signature="e#0#18#0" expanded="true" />
               </folding>
@@ -69,10 +69,11 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/MF_models/run_pg.py">
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/MF_models/PG/run.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state>
+            <state relative-caret-position="221">
+              <caret line="17" column="89" lean-forward="true" selection-start-line="17" selection-start-column="89" selection-end-line="17" selection-end-column="89" />
               <folding>
                 <element signature="e#0#10#0" expanded="true" />
               </folding>
@@ -81,22 +82,10 @@
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/MF_models/policy_gradient.py">
+        <entry file="file://$PROJECT_DIR$/MF_models/PG/PG_ac_box.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-911">
-              <caret line="16" column="33" lean-forward="true" selection-start-line="16" selection-start-column="33" selection-end-line="16" selection-end-column="33" />
-              <folding>
-                <element signature="e#0#18#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/MF_models/PG_ac_box.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1830">
-              <caret line="122" column="16" selection-start-line="122" selection-start-column="16" selection-end-line="122" selection-end-column="16" />
+            <state relative-caret-position="206">
+              <caret line="103" column="24" selection-start-line="103" selection-start-column="24" selection-end-line="103" selection-end-column="24" />
               <folding>
                 <element signature="e#1#19#0" expanded="true" />
               </folding>
@@ -105,10 +94,22 @@
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/gppg_model/test_actor.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="375">
+              <caret line="25" column="43" selection-start-line="25" selection-start-column="43" selection-end-line="25" selection-end-column="43" />
+              <folding>
+                <element signature="e#0#23#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/MF_models/distributions.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1770">
-              <caret line="118" column="24" selection-start-line="118" selection-start-column="24" selection-end-line="118" selection-end-column="24" />
+            <state relative-caret-position="120">
+              <caret line="33" column="21" selection-start-line="33" selection-start-column="21" selection-end-line="33" selection-end-column="21" />
               <folding>
                 <element signature="e#0#23#0" expanded="true" />
               </folding>
@@ -144,20 +145,30 @@
         <option value="$PROJECT_DIR$/actor.py" />
         <option value="$PROJECT_DIR$/policy_gradient.py" />
         <option value="$PROJECT_DIR$/todo.md" />
-        <option value="$PROJECT_DIR$/gppg_model/actor.py" />
-        <option value="$PROJECT_DIR$/MF_models/distributions.py" />
-        <option value="$PROJECT_DIR$/MF_models/policy_gradient.py" />
         <option value="$PROJECT_DIR$/gppg_model/pilco.py" />
-        <option value="$PROJECT_DIR$/MF_models/PG_ac_box.py" />
+        <option value="$PROJECT_DIR$/gppg_model/rewards.py" />
         <option value="$PROJECT_DIR$/gppg_model/main.py" />
+        <option value="$PROJECT_DIR$/gppg_model/actor.py" />
+        <option value="$PROJECT_DIR$/MF_models/PG_ac_box.py" />
+        <option value="$PROJECT_DIR$/MF_models/policy_gradient.py" />
+        <option value="$PROJECT_DIR$/MF_models/runner.py" />
+        <option value="$PROJECT_DIR$/MF_models/PG/run_pg.py" />
+        <option value="$PROJECT_DIR$/MF_models/A2C/run.py" />
+        <option value="$PROJECT_DIR$/MF_models/PG/__init__.py" />
+        <option value="$PROJECT_DIR$/MF_models/__init__.py" />
+        <option value="$PROJECT_DIR$/MF_models/A2C/__init__.py" />
+        <option value="$PROJECT_DIR$/MF_models/distributions.py" />
+        <option value="$PROJECT_DIR$/MF_models/PG/runner.py" />
+        <option value="$PROJECT_DIR$/MF_models/PG/PG_ac_box.py" />
+        <option value="$PROJECT_DIR$/MF_models/PG/run.py" />
       </list>
     </option>
   </component>
   <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="410" />
-    <option name="y" value="23" />
+    <option name="x" value="49" />
+    <option name="y" value="61" />
     <option name="width" value="1440" />
-    <option name="height" value="811" />
+    <option name="height" value="810" />
   </component>
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectView">
@@ -165,7 +176,6 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -176,12 +186,30 @@
             <path>
               <item name="RL-test" type="b2602c69:ProjectViewProjectNode" />
               <item name="RL-test" type="462c0819:PsiDirectoryNode" />
+              <item name="gppg_model" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="RL-test" type="b2602c69:ProjectViewProjectNode" />
+              <item name="RL-test" type="462c0819:PsiDirectoryNode" />
               <item name="MF_models" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="RL-test" type="b2602c69:ProjectViewProjectNode" />
+              <item name="RL-test" type="462c0819:PsiDirectoryNode" />
+              <item name="MF_models" type="462c0819:PsiDirectoryNode" />
+              <item name="A2C" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="RL-test" type="b2602c69:ProjectViewProjectNode" />
+              <item name="RL-test" type="462c0819:PsiDirectoryNode" />
+              <item name="MF_models" type="462c0819:PsiDirectoryNode" />
+              <item name="PG" type="462c0819:PsiDirectoryNode" />
             </path>
           </expand>
           <select />
         </subPane>
       </pane>
+      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -289,15 +317,15 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="0" y="23" width="1440" height="811" extended-state="6" />
+    <frame x="0" y="23" width="1440" height="810" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.13460183" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.13460183" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" weight="0.32729805" />
-      <window_info anchor="bottom" id="Run" order="2" weight="0.30876216" />
+      <window_info anchor="bottom" id="Run" order="2" weight="0.21587744" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.5626741" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
@@ -372,78 +400,133 @@
     <entry file="file://$PROJECT_DIR$/todo.md">
       <provider selected="true" editor-type-id="split-provider[text-editor;markdown-preview-editor]">
         <state split_layout="SPLIT">
-          <first_editor relative-caret-position="250">
-            <caret line="43" column="26" lean-forward="true" selection-start-line="43" selection-start-column="26" selection-end-line="43" selection-end-column="26" />
+          <first_editor relative-caret-position="645">
+            <caret line="43" column="26" selection-start-line="43" selection-start-column="26" selection-end-line="43" selection-end-column="26" />
           </first_editor>
           <second_editor />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/gppg_model/actor.py">
+    <entry file="file://$PROJECT_DIR$/MF_models/run_pg.py" />
+    <entry file="file://$PROJECT_DIR$/MF_models/policy_gradient.py" />
+    <entry file="file://$PROJECT_DIR$/MF_models/runner.py" />
+    <entry file="file://$PROJECT_DIR$/MF_models/PG_ac_box.py" />
+    <entry file="file://$PROJECT_DIR$/gppg_model/main.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="289">
-          <caret line="277" column="63" lean-forward="true" selection-start-line="277" selection-start-column="63" selection-end-line="277" selection-end-column="63" />
+        <state relative-caret-position="641">
+          <caret line="100" column="13" selection-start-line="100" selection-start-column="13" selection-end-line="100" selection-end-column="13" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/MF_models/distributions.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1770">
-          <caret line="118" column="24" selection-start-line="118" selection-start-column="24" selection-end-line="118" selection-end-column="24" />
-          <folding>
-            <element signature="e#0#23#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/gppg_model/pilco.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="338">
-          <caret line="232" column="20" lean-forward="true" selection-start-line="232" selection-start-column="20" selection-end-line="232" selection-end-column="20" />
+        <state relative-caret-position="3525">
+          <caret line="235" column="20" selection-start-line="235" selection-start-column="20" selection-end-line="235" selection-end-column="20" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/MF_models/PG_ac_box.py">
+    <entry file="file://$PROJECT_DIR$/gppg_model/rewards.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1830">
-          <caret line="122" column="16" selection-start-line="122" selection-start-column="16" selection-end-line="122" selection-end-column="16" />
+        <state relative-caret-position="2820">
+          <caret line="188" selection-start-line="188" selection-end-line="188" />
           <folding>
-            <element signature="e#1#19#0" expanded="true" />
+            <element signature="e#0#9#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/MF_models/run_pg.py">
+    <entry file="file://$PROJECT_DIR$/MF_models/PG/__init__.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/MF_models/__init__.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state>
+        <state relative-caret-position="30">
+          <caret line="2" column="2" selection-start-line="2" selection-start-column="2" selection-end-line="2" selection-end-column="2" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/MF_models/A2C/__init__.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/MF_models/distributions.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="120">
+          <caret line="33" column="21" selection-start-line="33" selection-start-column="21" selection-end-line="33" selection-end-column="21" />
+          <folding>
+            <element signature="e#0#23#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/MF_models/PG/runner.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="659">
+          <caret line="58" column="14" selection-start-line="58" selection-start-column="14" selection-end-line="58" selection-end-column="14" />
+          <folding>
+            <element signature="e#0#18#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/MF_models/PG/run_pg.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="823">
+          <caret line="79" lean-forward="true" selection-start-line="79" selection-end-line="79" />
           <folding>
             <element signature="e#0#10#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/MF_models/policy_gradient.py">
+    <entry file="file://$PROJECT_DIR$/gppg_model/actor.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-911">
-          <caret line="16" column="33" lean-forward="true" selection-start-line="16" selection-start-column="33" selection-end-line="16" selection-end-column="33" />
+        <state relative-caret-position="1842">
+          <caret line="269" column="88" selection-start-line="269" selection-start-column="88" selection-end-line="269" selection-end-column="88" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/gppg_model/main.py">
+    <entry file="file://$PROJECT_DIR$/MF_models/A2C/run.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1725">
-          <caret line="115" column="6" lean-forward="true" selection-start-line="115" selection-start-column="6" selection-end-line="115" selection-end-column="6" />
+        <state relative-caret-position="-214">
+          <caret line="1" column="23" lean-forward="true" selection-start-line="1" selection-start-column="23" selection-end-line="1" selection-end-column="23" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/gppg_model/test_actor.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="375">
+          <caret line="25" column="43" selection-start-line="25" selection-start-column="43" selection-end-line="25" selection-end-column="43" />
           <folding>
-            <element signature="e#0#18#0" expanded="true" />
+            <element signature="e#0#23#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/MF_models/PG/PG_ac_box.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="206">
+          <caret line="103" column="24" selection-start-line="103" selection-start-column="24" selection-end-line="103" selection-end-column="24" />
+          <folding>
+            <element signature="e#1#19#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/MF_models/PG/run.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="221">
+          <caret line="17" column="89" lean-forward="true" selection-start-line="17" selection-start-column="89" selection-end-line="17" selection-end-column="89" />
+          <folding>
+            <element signature="e#0#10#0" expanded="true" />
           </folding>
         </state>
       </provider>

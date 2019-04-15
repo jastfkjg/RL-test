@@ -1,2 +1,2 @@
-model_checkpoint_path: "pg_policy.ckpt"
-all_model_checkpoint_paths: "pg_policy.ckpt"
+model_checkpoint_path: "pg_actor.ckpt"
+all_model_checkpoint_paths: "pg_actor.ckpt"

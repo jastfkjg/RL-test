@@ -31,8 +31,7 @@ class Pd:
 class DiagGaussianPd(Pd):
     def __init__(self, flat):
         self.flat = flat
-        mean, logstd = tf.split(axis=len(flat.shape)-1, num_or_size_split=2,
-                value=flat)
+        mean, logstd = tf.split(axis=len(flat.shape)-1, num_or_size_splits=2, value=flat)
         self.mean = mean
         self.logstd = logstd
         self.std = tf.exp(logstd)
@@ -49,11 +48,11 @@ class DiagGaussianPd(Pd):
     def kl(self, other):
         assert isinstance(other, DiagGaussianPd)
         return tf.reduce_sum(other.logstd - self.logstd + (tf.square(self.std)
-            + tf.square(self.mean - other.mean)) / (2.0 * tf.square(other.std))
-            -0.5, axis=-1)
+            + tf.square(self.mean - other.mean)) / (2.0 * tf.square(other.std)) - 0.5, axis=-1)
+
     def entropy(self):
-        return tf.reduce_sum(self.logstd + 0.5 * np.log(2.0 * np.pi * np.e),
-                axis=-1)
+        return tf.reduce_sum(self.logstd + 0.5 * np.log(2.0 * np.pi * np.e), axis=-1)
+
     def sample(self):
         return self.mean + self.std * tf.random_normal(tf.shape(self.mean))
 

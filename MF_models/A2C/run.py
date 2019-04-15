@@ -30,7 +30,7 @@ def main(args):
 
     episode_rew = 0
     while True:
-        is state is not None:
+        if state is not None:
             actions, _, state, _ = model.step(obs, S=state, M=dones)
         else:
             actions, _, _, _ = model.step(obs)

@@ -178,10 +178,11 @@ class PendulumReward(Reward):
         return ((x + np.pi) % (2 * np.pi)) - np.pi
 
     def compute_gaussian_reward(self, m_state, s_state, m_action):
+        # TODO: find a better way to calculate expected reward, deal with cholesky decomp prob
         # the function to be integrated
         batched_eye = np.eye(s_state.shape[0])
         try:
-            L = np.linalg.cholesky(s_state + 0.01 * batched_eye)
+            L = np.linalg.cholesky(s_state + 0.1 * batched_eye)
         except np.linalg.linalg.LinAlgError:
             print("cholesky demcomposition failed. matrix is singular.")
             return 0., True
@@ -200,7 +201,7 @@ class PendulumReward(Reward):
             reward_density = proba * self.compute_reward(m_state + np.dot(L, u), m_action)
             return reward_density
 
-        reward = integrate.quad(f, -20., 20.)[0]
+        reward = integrate.quad(f, -10., 10.)[0]
         # too complicated to calculate  , args=(m_state, s_state, m_action)
         # reward = integrate.nquad(f, [[-5., 5.], [-5., 5.], [-5., 5.], [-5., 5.]])[0]
 
