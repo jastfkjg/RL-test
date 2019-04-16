@@ -129,14 +129,20 @@ class Actor():
         This function only calculate a single action, not a batch of actions
         :param m: mean of observation
         :param s: variance of observation
-        :return: the mean, variance of action, input-output covariance?
+        :param sample_num: sample num to calculate input-output covariance
+        :return: the mean, variance of action, input-output covariance
         """
+        e, v = tf.linalg.eigh(s)
+        eps = 1e-5
+        e = tf.maximum(e, eps)
+        s_state_pos_def = tf.matmul(tf.matmul(v, tf.diag(e)), tf.transpose(v))
         # add noise to solve Cholesky decomposition prob
-        batched_eye = np.eye(s.shape[0])
+        # batched_eye = np.eye(s.shape[0])
         # batched_eye = np.random.rand(s.shape[0], s.shape[0])
-        s_with_noise = s + 0.1 * batched_eye
+        # s_with_noise = s + 0.1 * batched_eye
+        # print("type in actor: ", type(m[0]), type(s[0][0]))
         try:
-            dist_obs = self.tfd.MultivariateNormalFullCovariance(loc=m, covariance_matrix=s_with_noise)
+            dist_obs = self.tfd.MultivariateNormalFullCovariance(loc=m, covariance_matrix=s_state_pos_def)
         except:
             print("Cholesky decomposition failed. In this case, we only take diag element of obs variance")
             dist_obs = self.tfd.MultivariateNormalDiag(loc=m, scale_diag=np.diag(s))
@@ -268,6 +274,7 @@ class Actor():
 
         print("Now we begin the optimization for controller.")
         batch_size = min(len(m_obs), len(s_obs), len(action_choosen), len(pilco_return))
+        m_obs = m_obs[:batch_size]
         s_obs = s_obs[:batch_size]
         action_choosen = action_choosen[:batch_size]
         pilco_return = pilco_return[:batch_size]

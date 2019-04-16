@@ -7,6 +7,8 @@ import numpy as np
 import scipy.integrate as integrate
 from scipy.stats import norm
 import math
+import tensorflow_probability as tfp
+import tensorflow as tf
 
 try:
     import mujoco_py
@@ -23,7 +25,7 @@ except:
 #         raise NotImplementedError
 class Reward:
     def __init__(self):
-        pass
+        self.tfd = tfp.distributions
 
     def compute_reward(self):
         raise NotImplementedError
@@ -177,38 +179,65 @@ class PendulumReward(Reward):
     def angle_normalize(self, x):
         return ((x + np.pi) % (2 * np.pi)) - np.pi
 
-    def compute_gaussian_reward(self, m_state, s_state, m_action):
+    def compute_gaussian_reward(self, m_state, s_state, m_action, sample_num=20):
         # TODO: find a better way to calculate expected reward, deal with cholesky decomp prob
-        # the function to be integrated
-        batched_eye = np.eye(s_state.shape[0])
+        # maybe do sample ourselves
+        # add noise to solve Cholesky decomposition prob
+        # print("type of s_x for r: ----- ", type(s_state[0][0]), type(m_state[0]), type(m_action[0]))
+        e, v = tf.linalg.eigh(s_state)
+        eps = 1e-5
+        e = tf.maximum(e, eps)
+        s_state_pos_def = tf.matmul(tf.matmul(v, tf.diag(e)), tf.transpose(v))
+        # batched_eye = np.eye(s_state.shape[0])
+        # batched_eye = np.random.rand(s.shape[0], s.shape[0])
+        # s_with_noise = s_state + 0.01 * batched_eye
         try:
-            L = np.linalg.cholesky(s_state + 0.1 * batched_eye)
-        except np.linalg.linalg.LinAlgError:
-            print("cholesky demcomposition failed. matrix is singular.")
-            return 0., True
+            dist_obs = self.tfd.MultivariateNormalFullCovariance(loc=m_state, covariance_matrix=s_state_pos_def)
+        except:
+            print("Cholesky decomposition failed. In this case, we only take diag element of obs variance")
+            dist_obs = self.tfd.MultivariateNormalDiag(loc=m_state, scale_diag=np.diag(s_state))
+        states = dist_obs.sample([sample_num])   # [sample_num, state_dim]
+        with tf.Session() as sess:
+            states = sess.run(states)
 
-        def f(u):
-            # proba = norm.pdf(u1, loc=0, scale=1) * norm.pdf(u2, 0, 1) * norm.pdf(u3, 0, 1) * norm.pdf(u4, 0, 1)
-            # sqrt_s = np.array(list(map(math.sqrt, s_state)))
-            proba = norm.pdf(u, loc=0, scale=1)
-            # batched_eye = np.eye(s_state.shape[0])
-            # try:
-            #     L = np.linalg.cholesky(s_state + 0.01 * batched_eye)
-            # except np.linalg.linalg.LinAlgError:
-            #     print('matrix is singular.')
-            #     return 0.
-            u = np.array([u] * s_state.shape[0])
-            reward_density = proba * self.compute_reward(m_state + np.dot(L, u), m_action)
-            return reward_density
+        total_reward = 0.
+        for state in states:
+            total_reward += self.compute_reward(state, m_action)
+        reward = total_reward / sample_num
 
-        reward = integrate.quad(f, -10., 10.)[0]
-        # too complicated to calculate  , args=(m_state, s_state, m_action)
-        # reward = integrate.nquad(f, [[-5., 5.], [-5., 5.], [-5., 5.], [-5., 5.]])[0]
-
-        # never done
         done = False
-
         return reward, done
+
+        # # the function to be integrated
+        # batched_eye = np.eye(s_state.shape[0])
+        # try:
+        #     L = np.linalg.cholesky(s_state + 0.1 * batched_eye)
+        # except np.linalg.linalg.LinAlgError:
+        #     print("cholesky demcomposition failed. matrix is singular.")
+        #     return 0., True
+        #
+        # def f(u):
+        #     # proba = norm.pdf(u1, loc=0, scale=1) * norm.pdf(u2, 0, 1) * norm.pdf(u3, 0, 1) * norm.pdf(u4, 0, 1)
+        #     # sqrt_s = np.array(list(map(math.sqrt, s_state)))
+        #     proba = norm.pdf(u, loc=0, scale=1)
+        #     # batched_eye = np.eye(s_state.shape[0])
+        #     # try:
+        #     #     L = np.linalg.cholesky(s_state + 0.01 * batched_eye)
+        #     # except np.linalg.linalg.LinAlgError:
+        #     #     print('matrix is singular.')
+        #     #     return 0.
+        #     u = np.array([u] * s_state.shape[0])
+        #     reward_density = proba * self.compute_reward(m_state + np.dot(L, u), m_action)
+        #     return reward_density
+        #
+        # reward = integrate.quad(f, -10., 10.)[0]
+        # # too complicated to calculate  , args=(m_state, s_state, m_action)
+        # # reward = integrate.nquad(f, [[-5., 5.], [-5., 5.], [-5., 5.], [-5., 5.]])[0]
+        #
+        # # never done
+        # done = False
+        #
+        # return reward, done
 
 class InvertedPendulumReward(Reward):
     """

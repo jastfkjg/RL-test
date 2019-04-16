@@ -226,6 +226,7 @@ class PILCO:
             # m_x[np.isnan(m_x)] = 0.01
             # s_x[np.isnan(s_x)] = ?
             # we need to change here if reward depends on action
+            # print("type of s_x for r: ----- ", type(s_x[0]), type(m_x[0]), type(m_u[0]))
             current_reward, done = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x, m_u)
             # current_reward, done = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x)
             # print("m_state: ", m_x, "s_state: ", s_x)
