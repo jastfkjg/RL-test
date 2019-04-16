@@ -31,7 +31,11 @@ class Actor():
 
         self._build_net()
 
-        self.sess = tf.Session()
+        config = tf.ConfigProto()
+        config.gpu_options.per_process_gpu_memory_fraction = 0.4
+        self.sess = tf.Session(config=config)
+
+        # self.sess = tf.Session()
         self.sess.run(tf.global_variables_initializer())
 
     def _build_net(self):
