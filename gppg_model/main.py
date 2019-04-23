@@ -170,7 +170,7 @@ for rollouts in range(max_episode):
     total_step += step
     ep_step_list.append(total_step)
     reward_list.append(reward)
-    total_episode += 1
+    # total_episode += 1
 
 # save controller's weights
 pilco.controller.save_weights(model_path + 'actor.ckpt')
