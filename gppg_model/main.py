@@ -8,6 +8,7 @@ import pandas as pd
 import matplotlib.pyplot as plt 
 from gym.spaces import Discrete, Box
 import argparse
+import ipdb
 
 parser = argparse.ArgumentParser()
 parser.add_argument("env_name", help="gym env name: classic control (CartPole-v1, MountainCarContinuous-v0, Pendulum-v0 ... )")
@@ -94,7 +95,7 @@ for i in range(1, 3):
 
 # hyperparams
 RENDER = False
-learning_rate = 0.02
+learning_rate = 0.01
 reward_decay = 0.995
 max_episode = 20
 # num_optim: how many real states to use as init state, default: None(use all real states)
@@ -118,6 +119,8 @@ if args.env_name == 'CartPole-v1':
     env_reward = CartPoleReward()
 elif args.env_name == 'Pendulum-v0':
     env_reward = PendulumReward()
+elif args.env_name == 'InvertedPendulum-v2':
+    env_reward = InvertedPendulumReward() 
 
 # load gp
 try:
@@ -135,7 +138,6 @@ for model in pilco.mgpr.models:
 print("num optim already: ", pilco.controller.get_num_optim())
 
 reward_list = []
-total_episode = 2
 ep_step_list = []
 X_init = X[:, 0: state_dim]
 
@@ -150,6 +152,7 @@ for rollouts in range(max_episode):
     # the controller optimization
     # states = X[:, 0: state_dim]
     # print(states.shape[0])
+    # ipdb.set_trace()
     pilco.optimize_controller(X_init, optim_horizon, num_optim=num_optim, num_collect=num_collect, gamma=reward_decay)
 
     # save controller's weights
@@ -158,6 +161,7 @@ for rollouts in range(max_episode):
 
     X_new, Y_new, step, reward = rollout(pilco_policy, 100, discrete_ac)
     # update dataset, why update instead of replace
+    # with more and more data, we are going to replace dataset, discard previous data
     X = np.vstack((X, X_new))
     Y = np.vstack((Y, Y_new))
     pilco.mgpr.set_XY(X, Y)

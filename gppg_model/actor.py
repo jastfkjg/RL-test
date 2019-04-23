@@ -140,11 +140,10 @@ class Actor():
         eps = 1e-5
         e = tf.maximum(e, eps)
         s_state_pos_def = tf.matmul(tf.matmul(v, tf.diag(e)), tf.transpose(v))
+        print("m, s_state_pos_def: ", m, s_state_pos_def)
         # add noise to solve Cholesky decomposition prob
         # batched_eye = np.eye(s.shape[0])
-        # batched_eye = np.random.rand(s.shape[0], s.shape[0])
         # s_with_noise = s + 0.1 * batched_eye
-        # print("type in actor: ", type(m[0]), type(s[0][0]))
         try:
             dist_obs = self.tfd.MultivariateNormalFullCovariance(loc=m, covariance_matrix=s_state_pos_def)
         except:

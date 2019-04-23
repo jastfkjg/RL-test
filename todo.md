@@ -40,5 +40,6 @@
 
 17. replay buffer. 
 
-18. for each step in real env, we can use this step to optimize our actor. and we can test actor's 
-performance every k steps 
+18. for each step in real env, we can use this step to optimize our actor. and we can test actor performance every k steps
+
+19. implementation of PPO, TRPO ... 

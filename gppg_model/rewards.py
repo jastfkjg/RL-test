@@ -7,13 +7,14 @@ import numpy as np
 import scipy.integrate as integrate
 from scipy.stats import norm
 import math
+import mujoco_py
 import tensorflow_probability as tfp
 import tensorflow as tf
 
-try:
-    import mujoco_py
-except:
-    print("you need to install mujoco_py")
+# try:
+# import mujoco_py
+# except:
+    # print("you need to install mujoco_py")
 
 # float_type = settings.dtypes.float_type
 # class Reward(Parameterized):
@@ -40,6 +41,7 @@ class CartPoleReward(Reward):
         super().__init__()
         self.theta_threshold_radians = 12 * 2 * math.pi / 360
         self.x_threshold = 2.4
+        self.with_action = False
 
     def compute_reward(self, state):
         """
@@ -111,6 +113,7 @@ class ContinuousMountainCarReward(Reward):
     def __init__(self):
         super().__init__()
         self.goal_position = 0.45
+        self.with_action = True
 
     def compute_reward(self, state, action):
         position = state[0]
@@ -154,6 +157,7 @@ class PendulumReward(Reward):
     """
     def __init__(self):
         super().__init__()
+        self.with_action = True
         self.max_torque = 2.
 
     def clip(self, th):
@@ -245,6 +249,7 @@ class InvertedPendulumReward(Reward):
     """
     def __init__(self):
         super().__init__()
+        self.with_action = False
 
     def compute_reward(self, state):
         s = state
@@ -255,27 +260,47 @@ class InvertedPendulumReward(Reward):
         else:
             return 1.0
 
-    def compute_gaussian_reward(self, m_state, s_state):
-        def f(u, m_state, s_state):
+    def compute_gaussian_reward(self, m_state, s_state, sample_num=20):
+
+        e, v = tf.linalg.eigh(s_state)
+        eps = 1e-5
+        e = tf.maximum(e, eps)
+        s_state_pos_def = tf.matmul(tf.matmul(v, tf.diag(e)), tf.transpose(v))
+        # batched_eye = np.eye(s_state.shape[0])
+        # batched_eye = np.random.rand(s.shape[0], s.shape[0])
+        # s_with_noise = s_state + 0.01 * batched_eye
+        try:
+            dist_obs = self.tfd.MultivariateNormalFullCovariance(loc=m_state, covariance_matrix=s_state_pos_def)
+        except:
+            print("Cholesky decomposition failed. In this case, we only take diag element of obs variance")
+            dist_obs = self.tfd.MultivariateNormalDiag(loc=m_state, scale_diag=np.diag(s_state))
+        states = dist_obs.sample([sample_num])   # [sample_num, state_dim]
+        with tf.Session() as sess:
+            states = sess.run(states)
+
+        total_reward = 0.
+        for state in states:
+            total_reward += self.compute_reward(state)
+        reward = total_reward / sample_num
+
+        # done = False
+        # def f(u, m_state, s_state):
             # proba = norm.pdf(u1, loc=0, scale=1) * norm.pdf(u2, 0, 1) * norm.pdf(u3, 0, 1) * norm.pdf(u4, 0, 1)
             # sqrt_s = np.array(list(map(math.sqrt, s_state)))
-            proba = norm.pdf(u, loc=0, scale=1)
-            batched_eye = np.eye(s_state.shape[0])
-            try:
-                L = np.linalg.cholesky(s_state + 0.01 * batched_eye)
-            except np.linalg.linalg.LinAlgError:
-                print('matrix is singular.')
-                return 0.
-            u = np.array([u] * s_state.shape[0])
-            reward_density = proba * self.compute_reward(m_state + np.dot(L, u))
-            return reward_density
+            # proba = norm.pdf(u, loc=0, scale=1)
+            # batched_eye = np.eye(s_state.shape[0])
+            # try:
+                # L = np.linalg.cholesky(s_state + 0.01 * batched_eye)
+            # except np.linalg.linalg.LinAlgError:
+                # print('matrix is singular.')
+                # return 0.
+            # u = np.array([u] * s_state.shape[0])
+            # reward_density = proba * self.compute_reward(m_state + np.dot(L, u))
+            # return reward_density
 
-        reward = integrate.quad(f, -20., 20., args=(m_state, s_state))[0]
-        # too complicated to calculate
-        # reward = integrate.nquad(f, [[-5., 5.], [-5., 5.], [-5., 5.], [-5., 5.]])[0]
+        # reward = integrate.quad(f, -20., 20., args=(m_state, s_state))[0]
 
-        # if expected reward < 0.4, we believe it's almost done
-        if reward < 0.4:
+        if reward < 0.5:
             done = True
         else:
             done = False
@@ -286,6 +311,7 @@ class HumanoidReward(Reward):
     # see https://github.com/openai/gym/blob/master/gym/envs/mujoco/humanoid.py
     def __init__(self, model_path):
         super().__init__()
+        self.with_action = True
         if model_path.startswith("/"):
             fullpath = model_path
         else:

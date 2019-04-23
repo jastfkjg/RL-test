@@ -72,7 +72,8 @@ class PILCO:
             num_optim = states.shape[0]
 
         # Pendulum-v0
-        s_x = np.diag([0.005, 0.03, 0.01])
+        # s_x = np.diag([0.005, 0.03, 0.01])
+        s_x = np.diag(np.ones(self.state_dim) * 0.1)
         # we should random sample states or use all states
         row = np.random.choice(states.shape[0], num_optim)
         states = states[row, :]
@@ -227,7 +228,10 @@ class PILCO:
             # s_x[np.isnan(s_x)] = ?
             # we need to change here if reward depends on action
             # print("type of s_x for r: ----- ", type(s_x[0]), type(m_x[0]), type(m_u[0]))
-            current_reward, done = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x, m_u)
+            if self.reward.with_action:
+                current_reward, done = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x, m_u)
+            else:
+                current_reward, done = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x)
             # current_reward, done = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x)
             # print("m_state: ", m_x, "s_state: ", s_x)
             print("reward for next state distribution: ", current_reward)
