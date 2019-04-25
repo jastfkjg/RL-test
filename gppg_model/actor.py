@@ -140,7 +140,7 @@ class Actor():
         eps = 1e-5
         e = tf.maximum(e, eps)
         s_state_pos_def = tf.matmul(tf.matmul(v, tf.diag(e)), tf.transpose(v))
-        print("m, s_state_pos_def: ", m, s_state_pos_def)
+        # print("m, s_state_pos_def: ", m, s_state_pos_def)
         # add noise to solve Cholesky decomposition prob
         # batched_eye = np.eye(s.shape[0])
         # s_with_noise = s + 0.1 * batched_eye
@@ -251,13 +251,13 @@ class Actor():
 
         # we directly use m_ac as output
         # s_ac = self.sess.run(self.s_ac, feed_dict={self.m_obs: m, self.s_obs: s})  # [1, action_dim]
-        if self.discrete_ac:
+        # if self.discrete_ac:
             # only for CartPole TODO
             # we should find a better way to find action for discrete case
-            if m_ac < 0:
-                return 0
-            else:
-                return 1
+            # if m_ac < 0:
+                # return 0
+            # else:
+                # return 1
         # m_ac = np.reshape(m_ac, (1, ))
         return m_ac
 

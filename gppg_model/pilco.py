@@ -3,11 +3,12 @@ import tensorflow as tf
 import gpflow
 import pandas as pd
 import time
+from tensorflow.python import debug as tf_debug
 
 # from actor import Actor, LinearActor
 from mgpr import MGPR
 from smgpr import SMGPR
-import rewards
+from rewards import *
 
 # float64
 float_type = gpflow.settings.dtypes.float_type
@@ -25,6 +26,7 @@ class PILCO:
         self.control_dim = X.shape[1] - Y.shape[1]
 
         self.sess = gpflow.get_default_session()
+        self.sess = tf_debug.LocalCLIDebugWrapperSession(self.sess)
         # self.sess.run(tf.global_variables_initializer())
 
         if controller is None:   # the policy  - to change
@@ -33,7 +35,7 @@ class PILCO:
             self.controller = controller
 
         if reward is None:     # reward function
-            self.reward = rewards.Reward()
+            self.reward = Reward()
         else:
             self.reward = reward
         
@@ -220,7 +222,7 @@ class PILCO:
                 ep_s_x.append(s_x)
                 ep_ac.append(ac)
             m_x, s_x = self.propagate(m_x, s_x, m_u, s_u, c_xu)
-            # solve the "nan in array" prob
+            # TODO: solve the "nan in array" prob
             if np.isnan(m_x).any() or np.isnan(s_x).any():
                 print("array must not contain NaNs")
                 break
@@ -289,3 +291,107 @@ class PILCO:
         # S_x.eval()
 
         return M_x.eval(session=self.sess), S_x.eval(session=self.sess)
+
+if __name__ == "__main__":
+    import gym
+    import mujoco_py
+    from gym.spaces import Discrete, Box
+
+    from actor import Actor
+    
+    def random_policy(env, pilco, x):
+        return env.action_space.sample()
+
+    def pilco_policy(env, pilco, x):
+        return pilco.controller.take_quick_action(x)
+
+    class Runner:
+        def __init__(self, env, timesteps=40):
+            self.env = env
+            self.timesteps = timesteps
+            
+        def run(self, *,  timesteps=self.timesteps, policy=random_policy, pilco=None, render=False, verbose=False):
+            """
+            get training data for GP to model the transition function
+            """
+            X, Y = [], []
+            total_step, total_reward = 0, 0.
+            x = self.env.reset()
+            
+            for timestep in range(timesteps):
+                if render: self.env.render()
+                u = policy(self.env, pilco, x)
+                x_new, _, done, _ = self.env.step(u)
+                
+                if verbose:
+                    print("Action: ", u)
+                    print("State :", x_new)
+                X.append(np.hstack((x, u)))
+                Y.append(x_new - x)
+                x = x_new
+                if done:
+                    break
+
+            return np.stack(X), np.stack(Y)
+
+
+    env = gym.make("InvertedPendulum-v2")
+    runner = Runner(env)
+    X, Y = runner.run()
+
+    if isinstance(env.observation_space, Discrete):
+        state_dim = env.observation_space.n
+    elif isinstance(env.observation_space, Box):
+        state_dim = env.observation_space.shape[0]
+
+    if isinstance(env.action_space, Discrete):
+        action_choice = env.action_space.n
+        action_dim = 1
+        discrete_ac = True
+    elif isinstance(env.action_space, Box):
+        action_dim = env.action_space.shape[0]
+        discrete_ac = False
+
+    # hyperparams
+    RENDER = False
+    learning_rate = 0.01
+    reward_decay = 0.995
+    max_episode = 20
+    # num_optim: how many real states to use as init state, default: None(use all real states)
+    num_optim = 30
+    # num_collect: how many fake data are we going to create in a batch (batch num) to optimize actor
+    num_collect = 10
+    # optim horizon: the horizon to calculate expected reward
+    optim_horizon = 20
+    # max_episode_step = 3000
+
+    controller = Actor(action_dim=action_dim, state_dim=state_dim, learning_rate=learning_rate, discrete_ac=discrete_ac)
+
+    # get env reward
+    env_reward = InvertedPendulumReward()
+
+    pilco = PILCO(X, Y, controller=controller, reward=env_reward)
+
+    X_init = X[:, 0: state_dim]
+
+    for rollouts in range(max_episode):
+        print("***" * 30)
+        print("the " + str(rollouts) + "th rollout begins.")
+        print("num optim: ", pilco.controller.get_num_optim())
+        print("***" * 30)
+        # optimize GP
+        pilco.optimize_gp()
+
+        # the controller optimization
+        # states = X[:, 0: state_dim]
+        # print(states.shape[0])
+        # ipdb.set_trace()
+        pilco.optimize_controller(X_init, optim_horizon, num_optim=num_optim, num_collect=num_collect, gamma=reward_decay)
+
+        X_new, Y_new = runner.run(policy=pilco_policy, pilco=pilco, timesteps=100)
+        # update dataset, why update instead of replace
+        # with more and more data, we are going to replace dataset, discard previous data
+        X = np.vstack((X, X_new))
+        Y = np.vstack((Y, Y_new))
+        pilco.mgpr.set_XY(X, Y)
+        X_init = np.array(X_new)[:, 0: state_dim]

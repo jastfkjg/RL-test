@@ -300,7 +300,7 @@ class InvertedPendulumReward(Reward):
 
         # reward = integrate.quad(f, -20., 20., args=(m_state, s_state))[0]
 
-        if reward < 0.5:
+        if reward < 0.3:
             done = True
         else:
             done = False
