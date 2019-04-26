@@ -1,21 +1,24 @@
 import numpy as np 
+import os
 import gym
 import pandas as pd
 import matplotlib.pyplot as plt 
 from gym.spaces import Discrete, Box
 import argparse
 import ipdb
+from tensorflow.python import debug as tf_debug
 
-from actor import LinearActor, Actor 
-from utils import *
+from utils import save_pilco, load_pilco, pilco_policy, Runner, get_env_reward 
+from actor import Actor 
 from pilco import PILCO
-from rewards import *
 from test_actor import evaluate_policy
 
 parser = argparse.ArgumentParser()
 parser.add_argument("env_name", help="gym env name: classic control (CartPole-v1, MountainCarContinuous-v0, Pendulum-v0 ... )")
-parser.add_argument("--load_actor_model", action='store_true', help="whether to load actor model")
-parser.add_argument("--load_gp_model", action='store_true', help="whether to load gp model")
+parser.add_argument("--load_actor_model", dest="load_actor_model", action='store_true', help="load actor model")
+parser.add_argument("--load_gp_model", dest="load_gp_model", action='store_true', help="load gp model")
+parser.add_argument("--debug", dest="debug", action='store_true', help="Use debugger to track down bad values")
+parser.set_defaults(load_actor_model=False, load_gp_model=False, debug=False)
 args = parser.parse_args()
 
 # np.random.seed(0)
@@ -27,6 +30,11 @@ args = parser.parse_args()
 # InvertedPendulum-v2, Swimmer-v2
 # Reacher-v2, Walker2d-v2, Humanoid-v2
 # Ant-v2, InvertedDoublePendulum-v2
+
+# print(args.load_actor_model, args.load_gp_model, args.debug)
+
+# diable tensorflow info and warning messages
+os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
 
 env = gym.make(args.env_name)
 model_path = './checkpoints/' + args.env_name + '/'

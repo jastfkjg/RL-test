@@ -1,5 +1,4 @@
 import numpy as np
-import tensorflow as tf
 import gpflow
 import pandas as pd
 import time
@@ -26,7 +25,7 @@ class PILCO:
         self.control_dim = X.shape[1] - Y.shape[1]
 
         self.sess = gpflow.get_default_session()
-        self.sess = tf_debug.LocalCLIDebugWrapperSession(self.sess)
+        # self.sess = tf_debug.LocalCLIDebugWrapperSession(self.sess)
         # self.sess.run(tf.global_variables_initializer())
 
         if controller is None:   # the policy  - to change

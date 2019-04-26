@@ -48,13 +48,15 @@ class Runner:
         self.timesteps = timesteps
         
 
-    def run(self, *,  timesteps=self.timesteps, policy=random_policy, pilco=None, render=False, verbose=False):
+    def run(self, *,  timesteps=None, policy=random_policy, pilco=None, render=False, verbose=False):
         """
         get training data for GP to model the transition function
         """
         X, Y = [], []
         total_step, total_reward = 0, 0.
         x = self.env.reset()
+        if not timesteps:
+            timesteps = self.timesteps
         
         for timestep in range(timesteps):
             if render: self.env.render()
@@ -77,9 +79,9 @@ def get_env_reward(env_name):
     # TODO
     if env_name == 'CartPole-v1':    
         env_reward = CartPoleReward()
-    elif args.env_name == 'Pendulum-v0':
+    elif env_name == 'Pendulum-v0':
         env_reward = PendulumReward()
-    elif args.env_name == 'InvertedPendulum-v2':
+    elif env_name == 'InvertedPendulum-v2':
         env_reward = InvertedPendulumReward() 
     else:
         raise NameError("dont have this env yet")
