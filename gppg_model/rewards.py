@@ -197,12 +197,15 @@ class PendulumReward(Reward):
         # s_with_noise = s_state + 0.01 * batched_eye
         try:
             dist_obs = self.tfd.MultivariateNormalFullCovariance(loc=m_state, covariance_matrix=s_state_pos_def)
-        except:
+            states = dist_obs.sample([sample_num])   # [sample_num, state_dim]
+            with tf.Session() as sess:
+                states = sess.run(states)
+        except tf.errors.InvalidArgumentError:
             print("Cholesky decomposition failed. In this case, we only take diag element of obs variance")
             dist_obs = self.tfd.MultivariateNormalDiag(loc=m_state, scale_diag=np.diag(s_state))
-        states = dist_obs.sample([sample_num])   # [sample_num, state_dim]
-        with tf.Session() as sess:
-            states = sess.run(states)
+            states = dist_obs.sample([sample_num])   # [sample_num, state_dim]
+            with tf.Session() as sess:
+                states = sess.run(states)
 
         total_reward = 0.
         for state in states:
@@ -271,12 +274,15 @@ class InvertedPendulumReward(Reward):
         # s_with_noise = s_state + 0.01 * batched_eye
         try:
             dist_obs = self.tfd.MultivariateNormalFullCovariance(loc=m_state, covariance_matrix=s_state_pos_def)
-        except:
+            states = dist_obs.sample([sample_num])   # [sample_num, state_dim]
+            with tf.Session() as sess:
+                states = sess.run(states)
+        except tf.errors.InvalidArgumentError:
             print("Cholesky decomposition failed. In this case, we only take diag element of obs variance")
             dist_obs = self.tfd.MultivariateNormalDiag(loc=m_state, scale_diag=np.diag(s_state))
-        states = dist_obs.sample([sample_num])   # [sample_num, state_dim]
-        with tf.Session() as sess:
-            states = sess.run(states)
+            states = dist_obs.sample([sample_num])   # [sample_num, state_dim]
+            with tf.Session() as sess:
+                states = sess.run(states)
 
         total_reward = 0.
         for state in states:

@@ -71,7 +71,7 @@ class MGPR(gpflow.Parameterized):
 
         lb = tf.exp(-tf.reduce_sum(iN * t, -1)/2) * beta
         tiL = t @ iL
-        c = self.variance / tf.sqrt(tf.linalg.det(B))
+        c = self.variance / tf.sqrt(abs(tf.linalg.det(B)))
 
         M = (tf.reduce_sum(lb, -1) * c)[:, None]
         V = tf.matmul(tiL, lb[:, :, None], adjoint_a=True)[..., 0] * c[:, None]
@@ -101,7 +101,7 @@ class MGPR(gpflow.Parameterized):
 
         diagL = tf.transpose(tf.linalg.diag_part(tf.transpose(L)))
         S = S - tf.diag(tf.reduce_sum(tf.multiply(iK, diagL), [1, 2]))
-        S = S / tf.sqrt(tf.linalg.det(R))
+        S = S / tf.sqrt(abs(tf.linalg.det(R)))
         S = S + tf.diag(self.variance)
         S = S - M @ tf.transpose(M)
 
