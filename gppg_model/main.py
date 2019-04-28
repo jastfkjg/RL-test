@@ -87,13 +87,19 @@ env_reward = get_env_reward(args.env_name)
 # load gp
 if args.load_gp_model:
     try:
-        pilco = load_pilco(model_path, controller, env_reward)
+        if args.debug:
+            pilco = load_pilco(model_path, controller, env_reward, debug=True)
+        else:
+            pilco = load_pilco(model_path, controller, env_reward)
         print("load gp model successfully")
     except:
-        print("can not find saved gp models")
-        pilco = PILCO(X, Y, controller=controller, reward=env_reward)
+        raise ValueError("can not find saved gp models")
+        # pilco = PILCO(X, Y, controller=controller, reward=env_reward)
 else:
-    pilco = PILCO(X, Y, controller=controller, reward=env_reward)
+    if args.debug:
+        pilco = PILCO(X, Y, controller=controller, reward=env_reward, debug=True)
+    else:
+        pilco = PILCO(X, Y, controller=controller, reward=env_reward)
 
 # for numerical stability
 for model in pilco.mgpr.models:

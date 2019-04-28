@@ -1,11 +1,10 @@
-import tensorflow as tf
 import numpy as np
 import gym
-from actor import Actor
+import mujoco_py
 import matplotlib.pyplot as plt
 from gym.spaces import Discrete, Box
 import argparse
-
+from actor import Actor
 
 def evaluate_policy(env, policy1, policy2, test_episode=100, max_step=200, render=False, plot=False):
 
@@ -112,7 +111,7 @@ if __name__ == "__main__":
     controller = Actor(action_dim=action_dim, state_dim=state_dim, learning_rate=learning_rate, discrete_ac=discrete_ac)
     controller.load_weights(model_path + 'actor.ckpt')
 
-    poilcy1 = controller.take_quick_action
+    policy1 = controller.take_quick_action
     
     def random_policy(obs):
         return env.action_space.sample()

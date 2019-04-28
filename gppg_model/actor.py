@@ -246,11 +246,16 @@ class Actor():
         m_obs = np.reshape(state, (1, self.state_dim))  # [1, state_dim]
         s_obs = np.reshape(s_obs, (1, self.state_dim * self.state_dim))  # [1, state_dim, state_dim]
 
-        m_ac = self.sess.run(self.m_ac, feed_dict={self.m_obs: m_obs, self.s_obs: s_obs})  # [1, action_dim]
-        m_ac = np.squeeze(m_ac, 0)  # [action_dim]
+        m_ac, s_ac = self.sess.run([self.m_ac, self.s_ac], feed_dict={self.m_obs: m_obs, self.s_obs: s_obs})  # [1, action_dim]
+        m_ac = np.squeeze(m_ac, 0)
+        s_ac = np.squeeze(s_ac, 0)
+        s_ac = abs(s_ac)
+        s_ac = np.diag(s_ac)
+        # import ipdb
+        # ipdb.set_trace()
+        action = self.sample_action(m_ac, s_ac)
 
-        # we directly use m_ac as output
-        # s_ac = self.sess.run(self.s_ac, feed_dict={self.m_obs: m, self.s_obs: s})  # [1, action_dim]
+        # action = np.squeeze(action, 0)  # [action_dim]
         # if self.discrete_ac:
             # only for CartPole TODO
             # we should find a better way to find action for discrete case
@@ -259,7 +264,7 @@ class Actor():
             # else:
                 # return 1
         # m_ac = np.reshape(m_ac, (1, ))
-        return m_ac
+        return action
 
     def optimize(self, m_obs=None, s_obs=None, pilco_return=None, action_choosen=None):
         """

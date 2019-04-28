@@ -18,11 +18,11 @@ def save_pilco(path, X, Y, pilco, sparse=False):
     for i, m in enumerate(pilco.mgpr.models):
         np.save(path + "model_" + str(i) + ".npy", m.read_values())
 
-def load_pilco(path, controller=None, reward=None, sparse=False):
+def load_pilco(path, controller=None, reward=None, sparse=False, debug=False):
     X = np.loadtxt(path + 'X.csv', delimiter=',')
     Y = np.loadtxt(path + 'Y.csv', delimiter=',')
     if not sparse:
-        pilco = PILCO(X, Y, controller=controller, reward=reward)
+        pilco = PILCO(X, Y, controller=controller, reward=reward, debug=debug)
     else:
         with open(path + 'n_ind.txt', 'r') as f:
             n_ind = int(f.readline())
