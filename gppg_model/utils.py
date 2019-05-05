@@ -36,11 +36,11 @@ def load_pilco(path, controller=None, reward=None, sparse=False, debug=False):
     return pilco
 
 
-def random_policy(env, pilco, x):
+def random_policy(env, controller, x):
     return env.action_space.sample()
 
-def pilco_policy(env, pilco, x):
-    return pilco.controller.take_quick_action(x)
+def pilco_policy(env, controller, x):
+    return controller.take_quick_action(x)
 
 class Runner:
     def __init__(self, env, timesteps=40):
@@ -48,7 +48,7 @@ class Runner:
         self.timesteps = timesteps
         
 
-    def run(self, *,  timesteps=None, policy=random_policy, pilco=None, render=False, verbose=False):
+    def run(self, *,  timesteps=None, policy=random_policy, controller=None, render=False, verbose=False):
         """
         get training data for GP to model the transition function
         """
@@ -60,7 +60,7 @@ class Runner:
         
         for timestep in range(timesteps):
             if render: self.env.render()
-            u = policy(self.env, pilco, x)
+            u = policy(self.env, controller, x)
             x_new, _, done, _ = self.env.step(u)
             
             if verbose:

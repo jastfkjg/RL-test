@@ -222,7 +222,6 @@ class PILCO:
                 ep_s_x.append(s_x)
                 ep_ac.append(ac)
             m_x, s_x = self.propagate(m_x, s_x, m_u, s_u, c_xu)
-            # TODO: solve the "nan in array" prob
             if np.isnan(m_x).any() or np.isnan(s_x).any():
                 print("array must not contain NaNs")
                 break
@@ -237,6 +236,7 @@ class PILCO:
             # current_reward, done = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x)
             # print("m_state: ", m_x, "s_state: ", s_x)
             print("reward for next state distribution: ", current_reward)
+            # TODO: put these in a function 
             if done:
                 if len(ep_reward) < num_collect:
                     ep_reward.append(0.0)

@@ -42,4 +42,6 @@
 
 18. for each step in real env, we can use this step to optimize our actor. and we can test actor performance every k steps
 
-19. implementation of PPO, TRPO ... 
+19. implementation of PPO, TRPO ...
+
+20. more pilco/gp models to provide expected reward ? 

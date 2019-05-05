@@ -6,7 +6,41 @@ from gym.spaces import Discrete, Box
 import argparse
 from actor import Actor
 
-def evaluate_policy(env, policy1, policy2, test_episode=100, max_step=200, render=False, plot=False):
+def evaluate_policy(env, policy, test_episode=100, max_step=500, render=False, plot=False):
+    reward_list = []
+
+    for i_episode in range(test_episode):
+        observation = env.reset()
+        step = 0
+        total_reward = 0.0
+
+        while True:
+            step += 1
+            if render:
+                env.render()
+
+            action = policy(observation)
+            observation_next, reward, done, info = env.step(action)
+            total_reward += reward
+
+            if done or step >= max_step:
+                reward_list.append(total_reward)
+                break
+            # update observation
+            observation = observation_next
+
+    if plot:
+        plt.plot(np.arange(test_episode), reward_list)
+        plt.xlabel('Episode')
+        plt.ylabel('Episode reward')
+        plt.show()
+
+    m, s = np.mean(reward_list), np.var(reward_list)
+    
+    return m, s
+
+
+def compare_policy(env, policy1, policy2, test_episode=100, max_step=200, render=False, plot=False):
 
     reward_list1 = []
 
@@ -82,6 +116,9 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("env_name", help="gym env name: classic control (CartPole-v1, MountainCarContinuous-v0, Pendulum-v0 ... )")
+    parser.add_argument("--plot", dest="plot", action="store_true", help="plot two policy performance.")
+    parser.add_argument("--test_episode", dest="test_episode", type=int, help="how many test episodes")
+    parser.set_defaults(plot=False, test_episode=100)
 
     args = parser.parse_args()
 
@@ -116,8 +153,10 @@ if __name__ == "__main__":
     def random_policy(obs):
         return env.action_space.sample()
     policy2 = random_policy
+    
 
-    m1, s1, m2, s2 = evaluate_policy(env, policy1, policy2)
+    m1, s1, m2, s2 = compare_policy(env, policy1, policy2, test_episode=args.test_episode, plot=args.plot)
+
 
 
 

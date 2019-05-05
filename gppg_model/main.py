@@ -11,7 +11,7 @@ from tensorflow.python import debug as tf_debug
 from utils import save_pilco, load_pilco, pilco_policy, Runner, get_env_reward 
 from actor import Actor 
 from pilco import PILCO
-from test_actor import evaluate_policy
+from test_actor import evaluate_policy, compare_policy
 
 parser = argparse.ArgumentParser()
 parser.add_argument("env_name", help="gym env name: classic control (CartPole-v1, MountainCarContinuous-v0, Pendulum-v0 ... )")
@@ -40,11 +40,6 @@ env = gym.make(args.env_name)
 model_path = './checkpoints/' + args.env_name + '/'
 
 runner = Runner(env=env, timesteps=50)
-X, Y = runner.run()
-for i in range(1, 3):
-    X_, Y_ = runner.run()
-    X = np.vstack((X, X_))
-    Y = np.vstack((Y, Y_))
 
 if isinstance(env.observation_space, Discrete):
     state_dim = env.observation_space.n
@@ -71,6 +66,7 @@ num_collect = 10
 # optim horizon: the horizon to calculate expected reward
 optim_horizon = 20
 # max_episode_step = 3000
+# --- total_optim_times = max_episode * num_optim * num_collect
 
 controller = Actor(action_dim=action_dim, state_dim=state_dim, learning_rate=learning_rate, discrete_ac=discrete_ac)
 # # load actor
@@ -80,6 +76,14 @@ if args.load_actor_model:
         print("load actor model successfully")
     except:
         print("can not find checkpoint.")
+    X, Y = runner.run(policy=pilco_policy, controller=controller, timesteps=100)
+else:
+    print("Get real data from random policy")
+    X, Y = runner.run()
+    for i in range(1, 3):
+        X_, Y_ = runner.run()
+        X = np.vstack((X, X_))
+        Y = np.vstack((Y, Y_))
 
 # get env reward
 env_reward = get_env_reward(args.env_name)
@@ -87,19 +91,13 @@ env_reward = get_env_reward(args.env_name)
 # load gp
 if args.load_gp_model:
     try:
-        if args.debug:
-            pilco = load_pilco(model_path, controller, env_reward, debug=True)
-        else:
-            pilco = load_pilco(model_path, controller, env_reward)
+        pilco = load_pilco(model_path, controller, env_reward, debug=args.debug)
         print("load gp model successfully")
     except:
         raise ValueError("can not find saved gp models")
         # pilco = PILCO(X, Y, controller=controller, reward=env_reward)
 else:
-    if args.debug:
-        pilco = PILCO(X, Y, controller=controller, reward=env_reward, debug=True)
-    else:
-        pilco = PILCO(X, Y, controller=controller, reward=env_reward)
+    pilco = PILCO(X, Y, controller=controller, reward=env_reward, debug=args.debug)
 
 # for numerical stability
 for model in pilco.mgpr.models:
@@ -112,6 +110,13 @@ print("num optim already: ", pilco.controller.get_num_optim())
 # ep_step_list = []
 X_init = X[:, 0: state_dim]
 
+def random_policy(obs):
+    return env.action_space.sample()
+# random policy as comparing policy
+policy2 = random_policy
+
+ep_m_reward, ep_s_reward = [], []
+
 for rollouts in range(max_episode):
     print("***" * 30)
     print("the " + str(rollouts) + "th rollout begins.")
@@ -121,8 +126,6 @@ for rollouts in range(max_episode):
     pilco.optimize_gp()
 
     # the controller optimization
-    # states = X[:, 0: state_dim]
-    # print(states.shape[0])
     # ipdb.set_trace()
     pilco.optimize_controller(X_init, optim_horizon, num_optim=num_optim, num_collect=num_collect, gamma=reward_decay)
 
@@ -130,14 +133,21 @@ for rollouts in range(max_episode):
     print("saving the controller.")
     pilco.controller.save_weights(model_path + 'actor.ckpt')
 
-    X_new, Y_new = runner.run(policy=pilco_policy, pilco=pilco, timesteps=100)
+    X_new, Y_new = runner.run(policy=pilco_policy, controller=pilco.controller, timesteps=100)
     # update dataset, why update instead of replace
     # with more and more data, we are going to replace dataset, discard previous data
-    X = np.vstack((X, X_new))
-    Y = np.vstack((Y, Y_new))
+    # X = np.vstack((X, X_new))
+    # Y = np.vstack((Y, Y_new))
+    X, Y = X_new, Y_new
     pilco.mgpr.set_XY(X, Y)
     X_init = np.array(X_new)[:, 0: state_dim]
 
+    m, s = evaluate_policy(env, pilco.controller.take_quick_action)
+    print("average reward for controller in " + str(rollouts) + "episodes: " + str(m))
+    print("variance of reward for controller in " + str(rollouts) + "episodes: " + str(s))
+
+    ep_m_reward.append(m)
+    ep_s_reward.append(s)
 
 # save controller's weights
 pilco.controller.save_weights(model_path + 'actor.ckpt')
@@ -149,11 +159,14 @@ save_pilco(model_path, X, Y, pilco)
 print("Finished !")
 
 policy1 = pilco.controller.take_quick_action
-def random_policy(obs):
-    return env.action_space.sample()
-policy2 = random_policy
 
-evaluate_policy(env, policy1, policy2)
+compare_policy(env, policy1, policy2)
+
+fig = plt.figure()
+plt.errorbar(np.arange(1, len(ep_m_reward)+1), ep_m_reward, yerr=ep_s_reward, fmt="o")
+plt.xlabel('Episode')
+plt.ylabel('Episode Reward')
+fig.savefig(model_path + 'actor_ep_reward.png')
 
 # plt.subplot(2, 2, 1)
 # plt.plot(np.arange(1, len(reward_list)+1), reward_list)
