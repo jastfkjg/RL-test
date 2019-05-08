@@ -264,25 +264,26 @@ class InvertedPendulumReward(Reward):
             return 1.0
 
     def compute_gaussian_reward(self, m_state, s_state, sample_num=20):
-
-        e, v = tf.linalg.eigh(s_state)
-        eps = 1e-5
-        e = tf.maximum(e, eps)
-        s_state_pos_def = tf.matmul(tf.matmul(v, tf.diag(e)), tf.transpose(v))
-        # batched_eye = np.eye(s_state.shape[0])
-        # batched_eye = np.random.rand(s.shape[0], s.shape[0])
-        # s_with_noise = s_state + 0.01 * batched_eye
-        try:
-            dist_obs = self.tfd.MultivariateNormalFullCovariance(loc=m_state, covariance_matrix=s_state_pos_def)
-            states = dist_obs.sample([sample_num])   # [sample_num, state_dim]
-            with tf.Session() as sess:
-                states = sess.run(states)
-        except tf.errors.InvalidArgumentError:
-            print("Cholesky decomposition failed. In this case, we only take diag element of obs variance")
-            dist_obs = self.tfd.MultivariateNormalDiag(loc=m_state, scale_diag=np.diag(s_state))
-            states = dist_obs.sample([sample_num])   # [sample_num, state_dim]
-            with tf.Session() as sess:
-                states = sess.run(states)
+        with tf.Graph().as_default() as graph:
+            with tf.Session(graph=graph) as sess:
+                e, v = tf.linalg.eigh(s_state)
+                eps = 1e-5
+                e = tf.maximum(e, eps)
+                s_state_pos_def = tf.matmul(tf.matmul(v, tf.diag(e)), tf.transpose(v))
+                # batched_eye = np.eye(s_state.shape[0])
+                # batched_eye = np.random.rand(s.shape[0], s.shape[0])
+                # s_with_noise = s_state + 0.01 * batched_eye
+                try:
+                    dist_obs = self.tfd.MultivariateNormalFullCovariance(loc=m_state, covariance_matrix=s_state_pos_def)
+                    states = dist_obs.sample([sample_num])   # [sample_num, state_dim]
+                    # with tf.Session() as sess:
+                    states = sess.run(states)
+                except tf.errors.InvalidArgumentError:
+                    print("Cholesky decomposition failed. In this case, we only take diag element of obs variance")
+                    dist_obs = self.tfd.MultivariateNormalDiag(loc=m_state, scale_diag=np.diag(s_state))
+                    states = dist_obs.sample([sample_num])   # [sample_num, state_dim]
+                    # with tf.Session() as sess:
+                    states = sess.run(states)
 
         total_reward = 0.
         for state in states:

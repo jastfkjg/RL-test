@@ -9,6 +9,9 @@ In particular, we use `TensorFlow` to avoid the need for hardcoded gradients and
 - tensorflow
 - GPflow
 - SciPy
+- tensorflow_probablity
+- numpy
+- mujoco_py
 
 # References
 

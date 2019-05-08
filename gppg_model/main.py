@@ -33,7 +33,7 @@ args = parser.parse_args()
 
 # print(args.load_actor_model, args.load_gp_model, args.debug)
 
-# diable tensorflow info and warning messages
+# disable tensorflow info and warning messages
 os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
 
 env = gym.make(args.env_name)
@@ -62,7 +62,7 @@ max_episode = 20
 # num_optim: how many real states to use as init state, default: None(use all real states)
 num_optim = 30
 # num_collect: how many fake data are we going to create in a batch (batch num) to optimize actor
-num_collect = 10
+num_collect = 5
 # optim horizon: the horizon to calculate expected reward
 optim_horizon = 20
 # max_episode_step = 3000

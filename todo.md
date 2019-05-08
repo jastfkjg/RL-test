@@ -44,4 +44,8 @@
 
 19. implementation of PPO, TRPO ...
 
-20. more pilco/gp models to provide expected reward ? 
+20. more pilco/gp models to provide expected reward ? (when the actor is good enough, and when we use actor to collect data
+for gaussian process, these transitions are not useful, maybe we should use several GPs to give a more stable transition function)
+
+21. memory leak prob for continuous adding ops in graph. maybe rewrite get_data() in pilco.py or figure out a better
+way to collect fake data. 
