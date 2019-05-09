@@ -13,6 +13,8 @@ class MGPR(gpflow.Parameterized):
 
         self.create_models(X, Y)
 
+        self.predict_net()
+
     def create_models(self, X, Y):
         self.models = []
         for i in range(self.num_outputs):
@@ -32,11 +34,79 @@ class MGPR(gpflow.Parameterized):
         optimizer = gpflow.train.ScipyOptimizer(options={'maxfun': 500})
         for model in self.models:
             optimizer.minimize(model)
-
     def predict_on_noisy_inputs(self, m, s):
-        iK, beta = self.calculate_factorizations()
-        return self.predict_given_factorizations(m, s, iK, beta)
-    
+        # iK, beta = self.calculate_factorizations()
+        # return self.predict_given_factorizations(m, s, iK, beta)
+        sess = gpflow.get_default_session()
+        M, S, V = sess.run([self.M, self.S, self.V], {self.m: m, self.s: s})
+        return M, S, V
+
+    def predict_net(self):
+
+        K = self.K(self.X)     # self.K: kernel function
+        batched_eye = tf.eye(tf.shape(self.X)[0], batch_shape=[self.num_outputs], dtype=float_type) # construct a batch of num_outputs identity matrices, each[self.X.shape[0],self.X.shape[0])
+        L = tf.cholesky(K + self.noise[:, None, None]*batched_eye)   # Cholesky decomposition
+        iK = tf.cholesky_solve(L, batched_eye)  # K @ iK = batched_eye
+        Y_ = tf.transpose(self.Y)[:, :, None]
+        # Why do we transpose Y? Maybe we need to change the definition of self.Y() or beta?
+        beta = tf.cholesky_solve(L, Y_)[:, :, 0]  # K @ beta = Y_
+
+        self.m = tf.placeholder(tf.float64, [1, self.num_dims])
+        self.s = tf.placeholder(tf.float64, [self.num_dims, self.num_dims])
+        m,s = self.m, self.s
+
+        s = tf.tile(s[None, None, :, :], [self.num_outputs, self.num_outputs, 1, 1])   #shape: [num_outputs, num_outputs, s.shape[0], s.shape[1]]
+        inp = tf.tile(self.centralized_input(m)[None, :, :], [self.num_outputs, 1, 1])   #shape: [num_outputs, self.X.shape[0], self.X.shape[1]]
+
+        # Calculate M and V: mean and inv(s) times input-output covariance
+        iL = tf.matrix_diag(1/self.lengthscales)      # 返回指定对角线值的对角线矩阵
+        iN = inp @ iL
+        B = iL @ s[0, ...] @ iL + tf.eye(self.num_dims, dtype=float_type)      # shape: [num_dim, num_dim]?
+
+        # Redefine iN as in^T and t --> t^T
+        # B is symmetric so its the same
+        t = tf.linalg.transpose(
+                tf.matrix_solve(B, tf.linalg.transpose(iN), adjoint=True),
+            )
+
+        lb = tf.exp(-tf.reduce_sum(iN * t, -1)/2) * beta
+        tiL = t @ iL
+        c = self.variance / tf.sqrt(abs(tf.linalg.det(B)))
+
+        M = (tf.reduce_sum(lb, -1) * c)[:, None]
+        V = tf.matmul(tiL, lb[:, :, None], adjoint_a=True)[..., 0] * c[:, None]
+
+        # Calculate S: Predictive Covariance
+        R = s @ tf.matrix_diag(
+                1/tf.square(self.lengthscales[None, :, :]) +
+                1/tf.square(self.lengthscales[:, None, :])
+            ) + tf.eye(self.num_dims, dtype=float_type)
+
+        # TODO: change this block according to the PR of tensorflow. Maybe move it into a function?
+        X = inp[None, :, :, :]/tf.square(self.lengthscales[:, None, None, :])
+        X2 = -inp[:, None, :, :]/tf.square(self.lengthscales[None, :, None, :])
+        Q = tf.matrix_solve(R, s)/2
+        Xs = tf.reduce_sum(X @ Q * X, -1)
+        X2s = tf.reduce_sum(X2 @ Q * X2, -1)
+        maha = -2 * tf.matmul(X @ Q, X2, adjoint_b=True) + \
+            Xs[:, :, :, None] + X2s[:, :, None, :]
+        #
+        k = tf.log(self.variance)[:, None] - \
+            tf.reduce_sum(tf.square(iN), -1)/2
+        L = tf.exp(k[:, None, :, None] + k[None, :, None, :] + maha)
+        S = (tf.tile(beta[:, None, None, :], [1, self.num_outputs, 1, 1])
+                @ L @
+                tf.tile(beta[None, :, :, None], [self.num_outputs, 1, 1, 1])
+            )[:, :, 0, 0]
+
+        diagL = tf.transpose(tf.linalg.diag_part(tf.transpose(L)))
+        S = S - tf.diag(tf.reduce_sum(tf.multiply(iK, diagL), [1, 2]))
+        S = S / tf.sqrt(abs(tf.linalg.det(R)))
+        S = S + tf.diag(self.variance)
+        S = S - M @ tf.transpose(M)
+
+        self.M, self.S, self.V = tf.transpose(M), S, tf.transpose(V)
+   
     def calculate_factorizations(self):
         K = self.K(self.X)     # self.K: kernel function
         batched_eye = tf.eye(tf.shape(self.X)[0], batch_shape=[self.num_outputs], dtype=float_type) # construct a batch of num_outputs identity matrices, each[self.X.shape[0],self.X.shape[0])
@@ -54,6 +124,7 @@ class MGPR(gpflow.Parameterized):
         OUT: mean (M) (row vector), variance (S) of the action
              and inv(s)*input-ouputcovariance
         """
+
 
         s = tf.tile(s[None, None, :, :], [self.num_outputs, self.num_outputs, 1, 1])   #shape: [num_outputs, num_outputs, s.shape[0], s.shape[1]]
         inp = tf.tile(self.centralized_input(m)[None, :, :], [self.num_outputs, 1, 1])   #shape: [num_outputs, self.X.shape[0], self.X.shape[1]]

@@ -58,17 +58,17 @@ elif isinstance(env.action_space, Box):
 RENDER = False
 learning_rate = 0.01
 reward_decay = 0.995
-max_episode = 20
+max_episode = 100
 # num_optim: how many real states to use as init state, default: None(use all real states)
 num_optim = 30
 # num_collect: how many fake data are we going to create in a batch (batch num) to optimize actor
-num_collect = 5
+num_collect = 8
 # optim horizon: the horizon to calculate expected reward
 optim_horizon = 20
 # max_episode_step = 3000
 # --- total_optim_times = max_episode * num_optim * num_collect
 
-controller = Actor(action_dim=action_dim, state_dim=state_dim, learning_rate=learning_rate, discrete_ac=discrete_ac)
+controller = Actor(action_dim=action_dim, state_dim=state_dim, learning_rate=learning_rate, debug=args.debug)
 # # load actor
 if args.load_actor_model:
     try:
@@ -136,9 +136,9 @@ for rollouts in range(max_episode):
     X_new, Y_new = runner.run(policy=pilco_policy, controller=pilco.controller, timesteps=100)
     # update dataset, why update instead of replace
     # with more and more data, we are going to replace dataset, discard previous data
-    # X = np.vstack((X, X_new))
-    # Y = np.vstack((Y, Y_new))
-    X, Y = X_new, Y_new
+    X = np.vstack((X, X_new))
+    Y = np.vstack((Y, Y_new))
+    # X, Y = X_new, Y_new
     pilco.mgpr.set_XY(X, Y)
     X_init = np.array(X_new)[:, 0: state_dim]
 
@@ -167,52 +167,8 @@ plt.errorbar(np.arange(1, len(ep_m_reward)+1), ep_m_reward, yerr=ep_s_reward, fm
 plt.xlabel('Episode')
 plt.ylabel('Episode Reward')
 fig.savefig(model_path + 'actor_ep_reward.png')
+print("figure store in: "+ model_path + 'actor_ep_reward.png')
 
-# plt.subplot(2, 2, 1)
-# plt.plot(np.arange(1, len(reward_list)+1), reward_list)
-# plt.xlabel('Episode')
-# plt.ylabel('Episode Reward')
-# plt.show()
-
-# plt.subplot(2, 2, 2)
-# plt.plot(ep_step_list, reward_list)
-# plt.xlabel('Total steps')
-# plt.ylabel('Episode Reward')
-# plt.show()
-
-# test_episode = 10
-# max_step = 200
-# render = False
-# test_reward_list = []
-
-# for i_episode in range(test_episode):
-    # observation = env.reset()
-    # step = 0
-    # total_reward = 0.0
-
-    # while True:
-        # step += 1
-        # if render:
-            # env.render()
-
-        # action = pilco_policy(observation)
-        # observation_next, reward, done, info = env.step(action)
-        # total_reward += reward
-
-        # if done or step >= max_step:
-            # test_reward_list.append(total_reward)
-
-            # print("Episode: ", i_episode, " step in this episode:", step, " reward: ", total_reward)
-            # break
-
-        # update observation
-        # observation = observation_next
-
-# plt.subplot(2, 2, 3)
-# plt.plot(np.arange(test_episode), test_reward_list)
-# plt.xlabel('Test Episode')
-# plt.ylabel('Test Episode Reward')
-# plt.show()
 
 # dataFrame = pd.DataFrame({'reward': reward_list})
 # dataFrame.to_csv("./pilco_output/episode_reward.csv", index=True, sep=',')

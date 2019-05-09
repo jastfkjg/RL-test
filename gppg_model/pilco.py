@@ -208,23 +208,33 @@ class PILCO:
         m_u = np.expand_dims(m_u, 0)
         # with tf.Graph().as_default() as graph:
             # with tf.Session(graph=graph).as_default():
-
-        m = tf.concat([m_x, m_u], axis=1)
-        s1 = tf.concat([s_x, s_x@c_xu], axis=1)
-        s2 = tf.concat([tf.transpose(s_x@c_xu), s_u], axis=1)
-        s = tf.concat([s1, s2], axis=0)
-
+        
+        with tf.Graph().as_default() as graph:
+            with tf.Session(graph=graph) as sess:
+                m = tf.concat([m_x, m_u], axis=1)
+                s1 = tf.concat([s_x, s_x@c_xu], axis=1)
+                s2 = tf.concat([tf.transpose(s_x@c_xu), s_u], axis=1)
+                s = tf.concat([s1, s2], axis=0)
+                m, s1, s = sess.run([m, s1, s])
+        # print("m, s in propagate: ", m.shape, s.shape)
+        
         M_dx, S_dx, C_dx = self.mgpr.predict_on_noisy_inputs(m, s)  # M_dx: mean of dx, S_dx: variance of dx
         M_x = M_dx + m_x
         # TODO: cleanup the following line
-        S_x = S_dx + s_x + s1@C_dx + tf.matmul(C_dx, s1, transpose_a=True, transpose_b=True)   #(12) in PILCO paper
 
-        # While-loop requires the shapes of the outputs to be fixed
-        M_x.set_shape([1, self.state_dim])
-        S_x.set_shape([self.state_dim, self.state_dim])
+        with tf.Graph().as_default() as graph:
+            with tf.Session(graph=graph) as sess:
+                S_x = S_dx + s_x + s1@C_dx + tf.matmul(C_dx, s1, transpose_a=True, transpose_b=True)   #(12) in PILCO paper
+
+                # While-loop requires the shapes of the outputs to be fixed
+                # M_x.set_shape([1, self.state_dim])
+                M_x.reshape((1, self.state_dim))
+                S_x.set_shape([self.state_dim, self.state_dim])
+                S_x = sess.run(S_x)
 
         # return M_x.eval(session=self.sess), S_x.eval(session=self.sess)
-        return M_x.eval(session=gpflow.get_default_session()),S_x.eval(session=gpflow.get_default_session())
+        # return M_x.eval(session=gpflow.get_default_session()),S_x.eval(session=gpflow.get_default_session())
+        return M_x, S_x
 
 
 

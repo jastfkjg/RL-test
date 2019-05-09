@@ -1,7 +1,6 @@
 import os
 from os import path
 import gym
-# import tensorflow as tf
 # from gpflow import Parameterized, Param, params_as_tensors, settings
 import numpy as np
 import scipy.integrate as integrate
@@ -140,10 +139,6 @@ class ContinuousMountainCarReward(Reward):
             return reward_density
 
         reward = integrate.quad(f, -20., 20., args=(m_state, s_state))[0]
-        # too complicated to calculate
-        # reward = integrate.nquad(f, [[-5., 5.], [-5., 5.], [-5., 5.], [-5., 5.]])[0]
-
-        # if reward > threshold: we may consider it's done ?
         if reward > 60.0:
             done = True
         else:
@@ -280,7 +275,7 @@ class InvertedPendulumReward(Reward):
                     states = sess.run(states)
                 except tf.errors.InvalidArgumentError:
                     print("Cholesky decomposition failed. In this case, we only take diag element of obs variance")
-                    dist_obs = self.tfd.MultivariateNormalDiag(loc=m_state, scale_diag=np.diag(s_state))
+                    dist_obs = self.tfd.MultivariateNormalDiag(loc=m_state, scale_diag=abs(np.diag(s_state)))
                     states = dist_obs.sample([sample_num])   # [sample_num, state_dim]
                     # with tf.Session() as sess:
                     states = sess.run(states)
@@ -289,23 +284,6 @@ class InvertedPendulumReward(Reward):
         for state in states:
             total_reward += self.compute_reward(state)
         reward = total_reward / sample_num
-
-        # done = False
-        # def f(u, m_state, s_state):
-            # proba = norm.pdf(u1, loc=0, scale=1) * norm.pdf(u2, 0, 1) * norm.pdf(u3, 0, 1) * norm.pdf(u4, 0, 1)
-            # sqrt_s = np.array(list(map(math.sqrt, s_state)))
-            # proba = norm.pdf(u, loc=0, scale=1)
-            # batched_eye = np.eye(s_state.shape[0])
-            # try:
-                # L = np.linalg.cholesky(s_state + 0.01 * batched_eye)
-            # except np.linalg.linalg.LinAlgError:
-                # print('matrix is singular.')
-                # return 0.
-            # u = np.array([u] * s_state.shape[0])
-            # reward_density = proba * self.compute_reward(m_state + np.dot(L, u))
-            # return reward_density
-
-        # reward = integrate.quad(f, -20., 20., args=(m_state, s_state))[0]
 
         if reward < 0.3:
             done = True

@@ -1,13 +1,14 @@
 import numpy as np 
 import tensorflow as tf 
-import tensorflow_probability as tfp 
+import tensorflow_probability as tfp
+from tensorflow.python import debug as tf_debug
 
 # np.random.seed(1)
 # tf.set_random_seed(1)
 
 class Actor():
 
-    def __init__(self, action_dim, state_dim, learning_rate, action_choice=0, hidden_size=10, discrete_ac=False):
+    def __init__(self, action_dim, state_dim, learning_rate, action_choice=0, hidden_size=10, discrete_ac=False, debug=False):
         self.action_dim = action_dim
         self.action_choice = action_choice
         self.state_dim = state_dim
@@ -42,6 +43,9 @@ class Actor():
         config = tf.ConfigProto()
         config.gpu_options.per_process_gpu_memory_fraction = 0.4
         self.sess = tf.Session(graph=self.graph, config=config)
+
+        if debug:
+            self.sess = tf_debug.LocalCLIDebugWrapperSession(self.sess)
 
         assert self.sess.graph is self.graph
 
@@ -135,8 +139,6 @@ class Actor():
             # choose Adam optimizer
             self.train_op = tf.train.AdamOptimizer(self.learning_rate).minimize(loss)
 
-    #  output the mean and variance of the action
-    #  the aciton space is continuous ? what if the action space is discret
 
     def compute_action(self, m, s, sample_num=10):
         """
@@ -152,16 +154,18 @@ class Actor():
                 eps = 1e-5
                 e = tf.maximum(e, eps)
                 s_state_pos_def = tf.matmul(tf.matmul(v, tf.diag(e)), tf.transpose(v))
-                # print("m, s_state_pos_def: ", m, s_state_pos_def)
                 # add noise to solve Cholesky decomposition prob
                 # batched_eye = np.eye(s.shape[0])
                 # s_with_noise = s + 0.1 * batched_eye
                 try:
                     dist_obs = self.tfd.MultivariateNormalFullCovariance(loc=m, covariance_matrix=s_state_pos_def)
-                except:
+                    states = dist_obs.sample([sample_num])
+                    states = sess.run(states)
+                except tf.errors.InvalidArgumentError:
                     print("Cholesky decomposition failed. In this case, we only take diag element of obs variance")
-                    dist_obs = self.tfd.MultivariateNormalDiag(loc=m, scale_diag=np.diag(s))
-                states = dist_obs.sample([sample_num])   # [10, state_dim]
+                    dist_obs = self.tfd.MultivariateNormalDiag(loc=m, scale_diag=abs(np.diag(s)))
+                    states = dist_obs.sample([sample_num])   # [10, state_dim]
+                    states = sess.run(states)
 
                 m = np.reshape(m, (1, self.state_dim))
                 m_obs = tf.transpose(m)
@@ -174,40 +178,25 @@ class Actor():
                 s_ac = self.sess.run(self.s_ac, feed_dict={self.m_obs: m, self.s_obs: s})  # [1, action_dim]
                 s_ac = np.squeeze(s_ac, 0)	  # [action_dim]
 
-                # abs, s_ac should not be negative
+                # s_ac should not be negative
                 s_ac = abs(s_ac)
-                # print("s action", s_ac)
 
-                # add noise to solve Cholesky decomposition prob
-                # batched_eye = np.eye(s_ac.shape[0])
-                # s_ac_with_noise = s_ac + 0.001 * batched_eye
                 dist_ac = self.tfd.MultivariateNormalDiag(loc=m_ac, scale_diag=s_ac)
                 actions = dist_ac.sample([sample_num])   # [10, action_dim]
 
                 s_ac = np.diag(s_ac)
 
-                # s_ac = s_ac * np.eye(self.action_dim)  # [action_dim, action_dim]
-
-                # dist_ac = self.tfd.MultivariateNormalFullCovariance(loc=m_ac, covariance_matrix=s_ac_with_noise)
-                # actions = dist_ac.sample([sample_num])
-
                 # E[state * action]
                 states = tf.transpose(states)
+
+                assert sample_num > 0
                 V = tf.matmul(states, actions) / sample_num - tf.matmul(m_obs, tf.expand_dims(m_ac, 0))
 
                 V = sess.run(V)
         # print(V)
 
-        # return the mean, variance of action; input-output covariance, the sample action ?
+        # return the mean, variance of action; input-output covariance
         return m_ac, s_ac, V
-
-    # def compute_det_action(self, m):
-    # 	"""
-    # 	:param m: the mean of observation
-    # 	:return: the mean of action
-    # 	"""
-    # 	m_ac = self.compute_action(m, tf.zeros([self.state_dim, self.state_dim]))[0]
-    # 	return m_ac
 
     def sample_action(self, m, s):
         """
@@ -217,12 +206,8 @@ class Actor():
         """
         # whether to use multinominal guassian distribution
         # multivariate normal
-        ac = np.random.multivariate_normal(m, s, 1)
+        ac = np.random.multivariate_normal(m, abs(s), 1)
         ac = np.squeeze(ac, 0)
-        # dist = self.tfd.Normal(loc=m, scale=s)
-        # # sample one action ?
-        # ac = dist.sample([1])
-        # ac = self.sess.run(ac)
 
         return ac
 
@@ -298,9 +283,6 @@ class Actor():
         s_obs = s_obs[:batch_size]
         action_choosen = action_choosen[:batch_size]
         pilco_return = pilco_return[:batch_size]
-        # assert len(s_obs) == batch_size
-        # assert len(action_choosen) == batch_size
-        # assert len(pilco_return) == batch_size
 
         # or we can concatenate m_obs, s_obs together for input
         s_obs = np.reshape(s_obs, (batch_size, self.state_dim * self.state_dim))
