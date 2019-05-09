@@ -274,7 +274,7 @@ class InvertedPendulumReward(Reward):
                     # with tf.Session() as sess:
                     states = sess.run(states)
                 except tf.errors.InvalidArgumentError:
-                    print("Cholesky decomposition failed. In this case, we only take diag element of obs variance")
+                    print("Cholesky decomposition failed in reward calculating. In this case, we only take diag element of obs variance")
                     dist_obs = self.tfd.MultivariateNormalDiag(loc=m_state, scale_diag=abs(np.diag(s_state)))
                     states = dist_obs.sample([sample_num])   # [sample_num, state_dim]
                     # with tf.Session() as sess:

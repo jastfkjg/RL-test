@@ -206,7 +206,7 @@ class Actor():
         """
         # whether to use multinominal guassian distribution
         # multivariate normal
-        ac = np.random.multivariate_normal(m, abs(s), 1)
+        ac = np.random.multivariate_normal(m, s, 1)
         ac = np.squeeze(ac, 0)
 
         return ac
