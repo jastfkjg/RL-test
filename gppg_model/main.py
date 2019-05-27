@@ -31,8 +31,6 @@ args = parser.parse_args()
 # Reacher-v2, Walker2d-v2, Humanoid-v2
 # Ant-v2, InvertedDoublePendulum-v2
 
-# print(args.load_actor_model, args.load_gp_model, args.debug)
-
 # disable tensorflow info and warning messages
 os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
 
@@ -60,9 +58,9 @@ learning_rate = 0.01
 reward_decay = 0.995
 max_episode = 100
 # num_optim: how many real states to use as init state, default: None(use all real states)
-num_optim = 30
+num_optim = None
 # num_collect: how many fake data are we going to create in a batch (batch num) to optimize actor
-num_collect = 8
+num_collect = 5
 # optim horizon: the horizon to calculate expected reward
 optim_horizon = 20
 # max_episode_step = 3000

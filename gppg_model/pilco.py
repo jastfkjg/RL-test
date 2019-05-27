@@ -132,7 +132,7 @@ class PILCO:
         print(pd.DataFrame(data=noises))
 
 
-    def get_data(self, m_x, s_x, horizon, num_collect=10, gamma=1.0):
+    def get_data(self, m_x, s_x, horizon, num_collect=10, gamma=1.0, ac_sample_num=5):
         """
         Get training data for Controller
         :param m_x: mean of init/start observation [1, dim_state]
@@ -153,12 +153,18 @@ class PILCO:
             # use controller to get an action distribution 
             m_u, s_u, c_xu = self.controller.compute_action(np.squeeze(m_x, 0), s_x)
             # sample an action from action distribution 
-            ac = self.controller.sample_action(m_u, s_u)
+            # ac = self.controller.sample_action(m_u, s_u)
+            # sample several actions from action distribution
+            acs = self.controller.sample_action(m_u, s_u, ac_sample_num)
+            # it is not a good way to sample an action for actor optimization
+            # TODO: we should find a better way, because the actual step we take here 
+            # is an action distribution
+            # ac = m_u
 
             if len(ep_m_x) < num_collect:
                 ep_m_x.append(np.squeeze(m_x, 0))
                 ep_s_x.append(s_x)
-                ep_ac.append(ac)
+                ep_ac.append(acs)
             
             # use gaussian process to predict next states observation
             m_x, s_x = self.propagate(m_x, s_x, m_u, s_u, c_xu)

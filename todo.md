@@ -48,4 +48,16 @@
 for gaussian process, these transitions are not useful, maybe we should use several GPs to give a more stable transition function)
 
 21. memory leak prob for continuous adding ops in graph. maybe rewrite get_data() in pilco.py or figure out a better
-way to collect fake data. 
+way to collect fake data.
+
+22. the result of gppg is not good, possible reasons:
+    - the policy in gp is deterministe because it outputs always the same action distribution and which will result in a 
+    same next obs distribution and average reward 
+    - it is not stable to optimize actor only with fake data, maybe we should add some real data in optimization step
+    - maybe the variance of action is too big, we will add a l2 regularisation for variance of action.
+    - we should not sample an action from action distribution because we pass action distribution to calculate culmulative reward
+    so, it is actually the action distribution that result in the culmulative reward instead of a particular action. So, we 
+    should find another way to sample action or find another way to optimize the actor(maybe similar in DDPG or Deep PILCO)
+
+23. since what we do here should use action distribution for optimization, so we need actually find a better way for optim.
+for example, we should apply an algorithm only for action distribution. -- maybe some changes on REINFORCE.

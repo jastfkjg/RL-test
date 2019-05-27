@@ -133,7 +133,7 @@ class Actor():
         with tf.variable_scope("loss"):
             # policy gradient: minimize -(log(pi)*r)   #TODO: discrete case
             neg_log_prob = - tf.log(self.dist.prob(self.ac))
-            loss = tf.reduce_mean(neg_log_prob * self.r)
+            loss = tf.reduce_mean(neg_log_prob * self.r) + 0.01 * tf.nn.l2_loss(self.s_ac)
 
         with tf.variable_scope("train"):
             # choose Adam optimizer
@@ -198,7 +198,7 @@ class Actor():
         # return the mean, variance of action; input-output covariance
         return m_ac, s_ac, V
 
-    def sample_action(self, m, s):
+    def sample_action(self, m, s, sample_num=1):
         """
         :param m: mean of action
         :param s: variance of action
@@ -206,8 +206,9 @@ class Actor():
         """
         # whether to use multinominal guassian distribution
         # multivariate normal
-        ac = np.random.multivariate_normal(m, s, 1)
-        ac = np.squeeze(ac, 0)
+        ac = np.random.multivariate_normal(m, s, sample_num)
+        if sample_num == 1:
+            ac = np.squeeze(ac, 0)
 
         return ac
 
@@ -267,8 +268,6 @@ class Actor():
         """
         optimize the policy, we take action_choosen as the mean action output from policy
         """
-        # m_obs: a list of mean state in an episode
-        # pilco_return: a list of cumulative reward from a list of state
 
         if not (action_choosen and m_obs and s_obs and pilco_return):
             # m_ac = action_choosen  # random sample a serie of action from action distribution ?
@@ -311,6 +310,12 @@ class Actor():
         if action_choosen:
             self.ep_ac_choosen = action_choosen
         self.ep_pilco_r = pilco_return
+
+    def store_fake_transition(self, m_obs, s_obs, pilco_r, actions):
+        self.ep_m_obs = m_obs
+        self.ep_s_obs = s_obs
+        self.ep_pilco_r = pilco_r
+        self.ep_acs = actions
 
     def save_weights(self, path):
         with self.graph.as_default():
