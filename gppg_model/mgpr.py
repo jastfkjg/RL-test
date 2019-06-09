@@ -1,7 +1,14 @@
 import tensorflow as tf
 import gpflow
+import numpy as np
 float_type = gpflow.settings.dtypes.float_type
 
+def randomize(model):
+    mean = 1; sigma = 0.01
+
+    model.kern.lengthscales.assign(mean + sigma*np.random.normal(size=model.kern.lengthscales.shape))
+    model.kern.variance.assign(mean + sigma*np.random.normal(size=model.kern.variance.shape))
+    model.likelihood.variance.assign(mean + sigma*np.random.normal())
 
 class MGPR(gpflow.Parameterized):
     def __init__(self, X, Y, name=None):
@@ -14,6 +21,8 @@ class MGPR(gpflow.Parameterized):
         self.create_models(X, Y)
 
         self.predict_net()
+
+        self.optimizers = []
 
     def create_models(self, X, Y):
         self.models = []
@@ -34,6 +43,30 @@ class MGPR(gpflow.Parameterized):
         optimizer = gpflow.train.ScipyOptimizer(options={'maxfun': 500})
         for model in self.models:
             optimizer.minimize(model)
+
+    def optimize(self, restarts=1):
+        if len(self.optimizers) == 0:
+            for model in self.models:
+                optimizer = gpflow.train.ScipyOptimizer(method='L-BFGS-B')
+                optimizer.minimize(model)
+                self.optimizers.append(optimizer)
+                restarts -= 1
+        for model, optimizer in zip(self.models, self.optimizers):
+            session = optimizer._model.enquire_session(None)
+            best_parameters = model.read_values(session=session)
+            best_likelihood = model.compute_log_likelihood()
+            for restart in range(restarts):
+                randomize(model)
+                optimizer._optimizer.minimize(session=session, \
+                        feed_dict=optimizer._gen_feed_dict(optimizer._model, None), \
+                        step_callback=None)
+                likelihood = model.compute_log_likelihood()
+                if likelihood > best_likelihood:
+                    best_parameters = models.read_values(session=session)
+                    best_likelihood = likelihood
+            model.assign(best_parameters)
+
+
     def predict_on_noisy_inputs(self, m, s):
         # iK, beta = self.calculate_factorizations()
         # return self.predict_given_factorizations(m, s, iK, beta)

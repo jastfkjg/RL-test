@@ -66,7 +66,7 @@ optim_horizon = 20
 # max_episode_step = 3000
 # --- total_optim_times = max_episode * num_optim * num_collect
 
-controller = Actor(action_dim=action_dim, state_dim=state_dim, learning_rate=learning_rate, debug=args.debug)
+controller = Actor(env=env, action_dim=action_dim, state_dim=state_dim, learning_rate=learning_rate, debug=args.debug)
 # # load actor
 if args.load_actor_model:
     try:

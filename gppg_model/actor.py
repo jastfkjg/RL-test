@@ -8,13 +8,14 @@ from tensorflow.python import debug as tf_debug
 
 class Actor():
 
-    def __init__(self, action_dim, state_dim, learning_rate, action_choice=0, hidden_size=10, discrete_ac=False, debug=False):
+    def __init__(self, env, action_dim, state_dim, learning_rate, action_choice=0, hidden_size=10, discrete_ac=False, debug=False):
         self.action_dim = action_dim
         self.action_choice = action_choice
         self.state_dim = state_dim
         self.learning_rate = learning_rate
         self.discrete_ac = discrete_ac
         self.hidden_size = hidden_size
+        self.env = env
 
         self.graph = tf.Graph()
         # self.graph.as_default()
@@ -196,6 +197,39 @@ class Actor():
         # print(V)
 
         # return the mean, variance of action; input-output covariance
+        return m_ac, s_ac, V
+
+    def random_action(self, m, s, sample_num=10):
+        with tf.Graph().as_default() as graph:
+            with tf.Session(graph=graph) as sess:
+                e, v = tf.linalg.eigh(s)
+                eps = 1e-5
+                e = tf.maximum(e, eps)
+                s_state_pos_def = tf.matmul(tf.matmul(v, tf.diag(e)), tf.transpose(v))
+                # add noise to solve Cholesky decomposition prob
+                # batched_eye = np.eye(s.shape[0])
+                # s_with_noise = s + 0.1 * batched_eye
+                try:
+                    dist_obs = self.tfd.MultivariateNormalFullCovariance(loc=m, covariance_matrix=s_state_pos_def)
+                    states = dist_obs.sample([sample_num])
+                except tf.errors.InvalidArgumentError:
+                    print("Cholesky decomposition failed. In this case, we only take diag element of obs variance")
+                    dist_obs = self.tfd.MultivariateNormalDiag(loc=m, scale_diag=abs(np.diag(s)))
+                    states = dist_obs.sample([sample_num])   # [10, state_dim]
+
+                m_ac = self.env.action_space.sample()
+                s_ac = np.ones(self.state_dim) * 0.1
+                dist_ac = self.tfd.MultivariateNormalDiag(loc=m_ac, scale_diag=s_ac)
+                actions = dist_ac.sample([sample_num])   # [10, action_dim]
+
+                s_ac = np.diag(s_ac)
+                states = tf.transpose(states)
+
+                assert sample_num > 0
+                V = tf.matmul(states, actions) / sample_num - tf.matmul(m_obs, tf.expand_dims(m_ac, 0))
+
+                V = sess.run(V)
+
         return m_ac, s_ac, V
 
     def sample_action(self, m, s, sample_num=1):
