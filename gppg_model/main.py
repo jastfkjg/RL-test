@@ -9,9 +9,11 @@ import ipdb
 from tensorflow.python import debug as tf_debug
 
 from utils import save_pilco, load_pilco, pilco_policy, Runner, get_env_reward 
-from actor import Actor 
+from actor2 import Actor 
 from pilco import PILCO
 from test_actor import evaluate_policy, compare_policy
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "1, 2"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("env_name", help="gym env name: classic control (CartPole-v1, MountainCarContinuous-v0, Pendulum-v0 ... )")
@@ -102,8 +104,6 @@ for model in pilco.mgpr.models:
     model.likelihood.variance = 0.001
     model.likelihood.variance.trainable = False
 
-print("num optim already: ", pilco.controller.get_num_optim())
-
 # reward_list = []
 # ep_step_list = []
 X_init = X[:, 0: state_dim]
@@ -118,7 +118,6 @@ ep_m_reward, ep_s_reward = [], []
 for rollouts in range(max_episode):
     print("***" * 30)
     print("the " + str(rollouts) + "th rollout begins.")
-    print("num optim: ", pilco.controller.get_num_optim())
     print("***" * 30)
     # optimize GP
     pilco.optimize_gp()
@@ -128,8 +127,8 @@ for rollouts in range(max_episode):
     pilco.optimize_controller(X_init, optim_horizon, num_optim=num_optim, num_collect=num_collect, gamma=reward_decay)
 
     # save controller's weights
-    print("saving the controller.")
-    pilco.controller.save_weights(model_path + 'actor.ckpt')
+    # print("saving the controller.")
+    # pilco.controller.save_weights(model_path + 'actor.ckpt')
 
     X_new, Y_new = runner.run(policy=pilco_policy, controller=pilco.controller, timesteps=100)
     # update dataset, why update instead of replace

@@ -17,7 +17,6 @@ class Actor():
         self.env = env
 
         self.graph = tf.Graph()
-        # self.graph.as_default()
         # assert self.graph is tf.get_default_graph()
 
         self.ep_m_obs, self.ep_s_obs, self.ep_ac_choosen, self.ep_pilco_r = [], [], [], []
@@ -29,11 +28,8 @@ class Actor():
             self.bias1 = tf.Variable(tf.random_normal([self.hidden_size], dtype=tf.float64), name="fc1_bias")
             self.weight2 = tf.Variable(tf.random_normal([self.hidden_size, self.action_dim], dtype=tf.float64), name="fc2_weight")
             self.bias2 = tf.Variable(tf.random_normal([self.action_dim], dtype=tf.float64), name="fc2_bias")
-            self.weight3 = tf.Variable(tf.random_normal([self.hidden_size, self.action_dim], dtype=tf.float64), name="fc3_weight")
-            self.bias3 = tf.Variable(tf.random_normal([self.action_dim], dtype=tf.float64), name="fc3_bias")
-
-            # num of optimizations already done
-            self.num_optim = tf.Variable(0)
+            # self.weight3 = tf.Variable(tf.random_normal([self.hidden_size, self.action_dim], dtype=tf.float64), name="fc3_weight")
+            # self.bias3 = tf.Variable(tf.random_normal([self.action_dim], dtype=tf.float64), name="fc3_bias")
 
             self._build_net()
             self.init = tf.global_variables_initializer()
@@ -49,7 +45,6 @@ class Actor():
 
         assert self.sess.graph is self.graph
 
-        # self.sess = tf.Session()
         self.sess.run(self.init)
 
     def _build_net(self):
@@ -62,23 +57,20 @@ class Actor():
             self.ac = tf.placeholder(tf.float64, [None, self.action_dim], name="action_choosen")
             self.r = tf.placeholder(tf.float64, [None, ], name="return_from_pilco")
 
-        # s_obs = tf.reshape(self.s_obs, [None, self.state_dim * self.state_dim])
-
         # m_obs = tf.expand_dims(self.m_obs, axis=2)    # [None, state_dim, 1]
 
         # consider to concatenate m_obs and s_obs
         self.obs = tf.concat([self.m_obs, self.s_obs], 1)   # [None, state_dim * (state_dim + 1)]
-
-        # How to choose the network architecture ? normally we have hidden size of 5, 10, 15 ?
 
         # fc1
         layer = tf.add(tf.matmul(self.obs, self.weight1), self.bias1)
         layer = tf.nn.tanh(layer)
         # fc2
         self.m_ac = tf.add(tf.matmul(layer, self.weight2), self.bias2)
+        s_ac_init = tf.constant(np.random.rand(self.action_dim))
+        self.s_ac = tf.get_variable("s_action", initializer=s_ac_init, dtype=tf.float64)
         # fc3
-        self.s_ac = tf.add(tf.matmul(layer, self.weight3), self.bias3)
-
+        # self.s_ac = tf.add(tf.matmul(layer, self.weight3), self.bias3)
 
         # layer = tf.layers.dense(inputs=self.obs, units=10, activation=tf.nn.tanh,
         # 						kernel_initializer=tf.random_normal_initializer(mean=0, stddev=0.3),
@@ -89,37 +81,8 @@ class Actor():
         # 						kernel_initializer=tf.random_normal_initializer(mean=0, stddev=0.3),
         # 						bias_initializer=tf.constant_initializer(0.1), name='fc2')
 
-        # self.all_act_prob = tf.nn.softmax(all_act, name="act_prob")
-
-        # self.m_ac = tf.add(tf.matmul(self.m_obs, self.weight), self.bias)  # tf.add
-        # Use re-parameterization method to get action variance
-        # Note: we can not apply the same weights on action variance ?   How to restrict the output, when action dim is small
-        # whether it's possilbe to use deterministic policy -- do not have action variance here, maybe add a small variance for GP
-        # we can not apply deterministic policy since the Q function is not a function of action here, we can not do BP.
-        ##self.s_ac = tf.transpose(weight, perm=[0, 2, 1]) @ self.s_obs @ weight
-        # self.s_ac = tf.matmul(self.s_obs, self.weight)
-
-        # How to get variance of action ?
-        # 1. give a constant variance
-        # self.s_ac = 0.1 * tf.diag(s_ac)
-        # 2. use a neural network with m_obs, s_obs as input, just like m_ac
-        # here we only output the diag values in s_ac
-
-        # self.s_ac = tf.layers.dense(inputs=layer, units=self.action_dim, activation=None,
-        # 						kernel_initializer=tf.random_normal_initializer(mean=0, stddev=0.3),
-        # 						bias_initializer=tf.constant_initializer(0.1), name='fc3')
-        # self.s_ac = tf.diag(self.s_ac) # what if s_ac: [None, action_dim]
-
-        # 2. gibbs sampling to calculate V = E(state*action) - m_state*m_action
-        # To get E[state * action]:
-        # - sample states from self.m_obs, self.s_obs, actions from self.m_ac, self.s_ac
-        # - then compute mean of sum(state * action) = E(state * action]
-        # - V = E(state * action) - self.m_ac * self.m_obs
-
-        # distribution of action, we need to change to multi-variate gaussian dist
         # or we may use re-parameterization trick
         self.dist = self.tfd.MultivariateNormalDiag(loc=self.m_ac, scale_diag=self.s_ac)
-        # self.dist = self.tfd.Normal(loc=self.m_ac, scale=self.s_ac)
 
         with tf.variable_scope("loss"):
             # policy gradient: minimize -(log(pi)*r)   
@@ -130,9 +93,14 @@ class Actor():
         with tf.variable_scope("train"):
             # Adam optimizer
             self.optimizer = tf.train.AdamOptimizer(self.learning_rate)
+            
             gvs = self.optimizer.compute_gradients(loss)
-            capped_gvs = [(tf.clip_by_value(grad, -0.5, 0.5), var) for grad, var in gvs]
-            self.train_op = self.optimizer.apply_gradients(capped_gvs)
+            print(gvs)
+            try:
+                capped_gvs = [(tf.clip_by_value(grad, -0.5, 0.5), var) for grad, var in gvs]
+                self.train_op = self.optimizer.apply_gradients(capped_gvs)
+            except: 
+                pass
 
 
     def compute_action(self, m, s, sample_num=10):
@@ -170,8 +138,9 @@ class Actor():
                 # print("m action", m_ac)
                 m_ac = np.squeeze(m_ac, 0)     # [action_dim]
 
-                s_ac = self.sess.run(self.s_ac, feed_dict={self.m_obs: m, self.s_obs: s})  # [1, action_dim]
-                s_ac = np.squeeze(s_ac, 0)	  # [action_dim]
+                s_ac = self.sess.run(self.s_ac) 
+                print("s_ac: ", s_ac)
+                # s_ac = np.squeeze(s_ac, 0)	  # [action_dim]
 
                 # s_ac should not be negative
                 s_ac = abs(s_ac)
@@ -206,10 +175,12 @@ class Actor():
                 try:
                     dist_obs = self.tfd.MultivariateNormalFullCovariance(loc=m, covariance_matrix=s_state_pos_def)
                     states = dist_obs.sample([sample_num])
+                    states = sess.run(states)
                 except tf.errors.InvalidArgumentError:
                     print("Cholesky decomposition failed. In this case, we only take diag element of obs variance")
                     dist_obs = self.tfd.MultivariateNormalDiag(loc=m, scale_diag=abs(np.diag(s)))
                     states = dist_obs.sample([sample_num])   # [10, state_dim]
+                    states = sess.run(states)
 
                 m_ac = self.env.action_space.sample()
                 m_ac = m_ac.astype('float64')
@@ -217,7 +188,7 @@ class Actor():
                 dist_ac = self.tfd.MultivariateNormalDiag(loc=m_ac, scale_diag=s_ac)
                 actions = dist_ac.sample([sample_num])   # [10, action_dim]
 
-                s_ac = np.diag(s_ac)
+                s_ac = abs(np.diag(s_ac))
                 states = tf.transpose(states)
                 m = np.reshape(m, (1, self.state_dim))
                 m = tf.transpose(m)
@@ -277,22 +248,12 @@ class Actor():
 
         m_ac, s_ac = self.sess.run([self.m_ac, self.s_ac], feed_dict={self.m_obs: m_obs, self.s_obs: s_obs})  # [1, action_dim]
         m_ac = np.squeeze(m_ac, 0)
-        s_ac = np.squeeze(s_ac, 0)
         s_ac = abs(s_ac)
         s_ac = np.diag(s_ac)
         # import ipdb
         # ipdb.set_trace()
         action = self.sample_action(m_ac, s_ac)
 
-        # action = np.squeeze(action, 0)  # [action_dim]
-        # if self.discrete_ac:
-            # only for CartPole TODO
-            # we should find a better way to find action for discrete case
-            # if m_ac < 0:
-                # return 0
-            # else:
-                # return 1
-        # m_ac = np.reshape(m_ac, (1, ))
         return action
 
     def optimize(self, m_obs=None, s_obs=None, pilco_return=None, action_choosen=None):
@@ -325,12 +286,9 @@ class Actor():
         })
 
         print("Controller optimization finished.")
-        self.sess.run(self.num_optim.assign(self.num_optim + 1))
         # reset the episode record
         self.ep_m_obs, self.ep_s_obs, self.ep_pilco_r, self.ep_ac_choosen = [], [], [], []
 
-    def get_num_optim(self):
-        return self.sess.run(self.num_optim)
 
     def store_transition(self, m_obs, s_obs, pilco_return, action_choosen=None):
         """
@@ -350,13 +308,13 @@ class Actor():
 
     def save_weights(self, path):
         with self.graph.as_default():
-            saver = tf.train.Saver([self.weight1, self.weight2, self.weight3, self.bias1, self.bias2, self.bias3, self.num_optim])
+            saver = tf.train.Saver()
             save_path = saver.save(self.sess, path)
         print("model saved in file: %s" % save_path)
 
     def load_weights(self, path):
         with self.graph.as_default():
-            saver = tf.train.Saver([self.weight1, self.weight2, self.weight3, self.bias1, self.bias2, self.bias3, self.num_optim])
+            saver = tf.train.Saver()
             saver.restore(self.sess, path)
 
 

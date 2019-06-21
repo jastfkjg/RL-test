@@ -134,7 +134,7 @@ class PILCO:
         print(pd.DataFrame(data=noises))
 
 
-    def get_data(self, m_x, s_x, horizon, num_collect=10, gamma=1.0, ac_sample_num=1):
+    def get_data(self, m_x_init, s_x_init, horizon, num_collect=10, gamma=1.0, ac_sample_num=1):
         """
         Get training data for Controller
         :param m_x: mean of init/start observation [1, dim_state]
@@ -144,74 +144,102 @@ class PILCO:
         """
         ep_m_x, ep_s_x, ep_reward, ep_ac = [], [], [], []
 
-        for i in range(horizon + num_collect):
-            print("Collecting " + str(i) + "th fake data for controller optimization.")
+        for i in range(num_collect):
+            total_reward = 0.
 
-            if i <= num_collect:
-                discount_factor = gamma
-            else:
-                discount_factor = gamma ** (i - num_collect)
-
-            # use controller to get an action distribution
-            # exploration
-            random_num = random.random()
-            if random_num < 0.9:
-                m_u, s_u, c_xu = self.controller.compute_action(np.squeeze(m_x, 0), s_x)
-            else:
-                # TODO: how to choose m_u, s_u, c_xu
-                m_u, s_u, c_xu = self.controller.random_action()
+            m_u, s_u, c_xu = self.controller.random_action(np.squeeze(m_x_init, 0), s_x_init)
             print('mean and variance of action distribution: ', m_u, s_u)
-            # sample an action from action distribution 
-            # ac = self.controller.sample_action(m_u, s_u)
-            # sample several actions from action distribution
-            acs = self.controller.sample_action(m_u, s_u, ac_sample_num)
-            # it is not a good way to sample an action for actor optimization
-            # TODO: we should find a better way, because the actual step we take here 
-            # is an action distribution
-            # acs = m_u
 
-            if len(ep_m_x) < num_collect:
-                ep_m_x.append(np.squeeze(m_x, 0))
-                ep_s_x.append(s_x)
-                ep_ac.append(acs)
+            ep_m_x.append(np.squeeze(m_x_init, 0))
+            ep_s_x.append(s_x_init)
+            # s_u is very small
+            ep_ac.append(m_u)
 
-            # we should apply the sample ac to propagate
-            m_ac = acs
-            s_ac = np.diag(np.ones(self.control_dim) * 0.1)
-            # TODO: calculate c_xu here
-            m_x, s_x = self.propagate(m_x, s_x, m_ac, s_ac, c_xu)
+            m_x, s_x = self.propagate(m_x_init, s_x_init, m_u, s_u, c_xu)
             
-            # use gaussian process to predict next states observation
-            # m_x, s_x = self.propagate(m_x, s_x, m_u, s_u, c_xu)
-
-            # # resetting the default graph and session
-            # gpflow.reset_default_graph_and_session()
-            # self.sess.graph.finalize()
-            # assert self.sess.graph is tf.get_default_graph()
-
-            # calculate reward (if reward depends on action)
             if self.reward.with_action:
                 current_reward, done = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x, m_u)
             else:
                 current_reward, done = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x)
-            print("reward for next state distribution: ", current_reward)
 
+            total_reward += current_reward
+            
             if done:
-                if len(ep_reward) < num_collect:
-                    ep_reward.append(0.0)
-                break
-            else:
-                # calculate discounted culmulative reward
-                for n in range(len(ep_reward) - 1, -1, -1):
-                    if discount_factor < gamma ** horizon:
-                        break
-                    ep_reward[n] += discount_factor * current_reward
-                    discount_factor *= gamma
-                if len(ep_reward) < num_collect:
-                    ep_reward.append(current_reward)
+                ep_reward.append(total_reward)
+                continue
+
+            for j in range(horizon):
+                m_u, s_u, c_xu = self.controller.compute_action(np.squeeze(m_x, 0), s_x)
+                
+                if self.reward.with_action:
+                    current_reward, done = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x, m_u)
+                else:
+                    current_reward, done = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x)
+                
+                total_reward += (current_reward * (gamma ** (j + 1))
+                if done:
+                    ep_reward.append(total_reward)
+                    break            
+
+        # for i in range(horizon + num_collect):
+            # print("Collecting " + str(i) + "th fake data for controller optimization.")
+
+            # if i <= num_collect:
+                # discount_factor = gamma
+            # else:
+                # discount_factor = gamma ** (i - num_collect)
+
+            # #use controller to get an action distribution
+            # # exploration
+            # random_num = random.random()
+            # if random_num < 0.8:
+                # m_u, s_u, c_xu = self.controller.compute_action(np.squeeze(m_x, 0), s_x)
+            # else:
+                # m_u, s_u, c_xu = self.controller.random_action(np.squeeze(m_x, 0), s_x)
+            # print('mean and variance of action distribution: ', m_u, s_u)
+            # # ac = self.controller.sample_action(m_u, s_u)
+            # acs = self.controller.sample_action(m_u, s_u, ac_sample_num)
+
+            # if len(ep_m_x) < num_collect:
+                # ep_m_x.append(np.squeeze(m_x, 0))
+                # ep_s_x.append(s_x)
+                # ep_ac.append(acs)
+
+            # # we should apply the sample ac to propagate
+            # # s_ac = np.diag(np.ones(self.control_dim) * 0.1)
+            # # m_x, s_x = self.propagate(m_x, s_x, m_ac, s_ac, c_xu)
+            
+            # m_x, s_x = self.propagate(m_x, s_x, m_u, s_u, c_xu)
+
+            # resetting the default graph and session
+            # #gpflow.reset_default_graph_and_session()
+            # # self.sess.graph.finalize()
+            # # assert self.sess.graph is tf.get_default_graph()
+
+            # # calculate reward (if reward depends on action)
+            # if self.reward.with_action:
+                # current_reward, done = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x, m_u)
+            # else:
+                # current_reward, done = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x)
+            # print("reward for next state distribution: ", current_reward)
+
+            # if done:
+                # if len(ep_reward) < num_collect:
+                    # ep_reward.append(0.0)
+                # break
+            # else:
+                calculate discounted culmulative reward
+                # for n in range(len(ep_reward) - 1, -1, -1):
+                    # if discount_factor < gamma ** horizon:
+                        # break
+                    # ep_reward[n] += discount_factor * current_reward
+                    # discount_factor *= gamma
+                # if len(ep_reward) < num_collect:
+                    # ep_reward.append(current_reward)
 
         # store these data in controller for optimization 
         self.controller.store_transition(ep_m_x, ep_s_x, ep_reward, ep_ac)
+        # print(ep_reward[0], ep_m_x[0], ep_s_x[0])
 
         return ep_m_x, ep_s_x, ep_reward
 
