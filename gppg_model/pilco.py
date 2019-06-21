@@ -176,7 +176,8 @@ class PILCO:
                 else:
                     current_reward, done = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x)
                 
-                total_reward += (current_reward * (gamma ** (j + 1))
+                total_reward += (current_reward * (gamma ** (j + 1)))
+                
                 if done:
                     ep_reward.append(total_reward)
                     break            
@@ -228,7 +229,7 @@ class PILCO:
                     # ep_reward.append(0.0)
                 # break
             # else:
-                calculate discounted culmulative reward
+                ## calculate discounted culmulative reward
                 # for n in range(len(ep_reward) - 1, -1, -1):
                     # if discount_factor < gamma ** horizon:
                         # break
