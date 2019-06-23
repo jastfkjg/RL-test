@@ -14,6 +14,8 @@ from pilco import PILCO
 from test_actor import evaluate_policy, compare_policy
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "1, 2"
+# disable tensorflow info and warning messages
+os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("env_name", help="gym env name: classic control (CartPole-v1, MountainCarContinuous-v0, Pendulum-v0 ... )")
@@ -24,6 +26,7 @@ parser.set_defaults(load_actor_model=False, load_gp_model=False, debug=False)
 args = parser.parse_args()
 
 # np.random.seed(0)
+
 # classic control:
 # env = gym.make('CartPole-v1')
 # MountainCarContinuous-v0, Pendulum-v0
@@ -33,11 +36,19 @@ args = parser.parse_args()
 # Reacher-v2, Walker2d-v2, Humanoid-v2
 # Ant-v2, InvertedDoublePendulum-v2
 
-# disable tensorflow info and warning messages
-os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
+params = {"model_path": './checkpoints/' + args.env_name + '/',
+        "env_name": args.env_name,
+        "render": False,
+        "learning_rate": 1e-2,
+        "reward_decay": 0.995,
+        "max_episode": 100,
+        "num_optim": None,
+        "num_collect": 30,
+        "horizon": 20,
+        }
 
 env = gym.make(args.env_name)
-model_path = './checkpoints/' + args.env_name + '/'
+# model_path = './checkpoints/' + args.env_name + '/'
 
 runner = Runner(env=env, timesteps=50)
 
@@ -54,25 +65,13 @@ elif isinstance(env.action_space, Box):
     action_dim = env.action_space.shape[0]
     discrete_ac = False
 
-# hyperparams
-RENDER = False
-learning_rate = 0.01
-reward_decay = 0.995
-max_episode = 100
-# num_optim: how many real states to use as init state, default: None(use all real states)
-num_optim = None
-# num_collect: how many fake data are we going to create in a batch (batch num) to optimize actor
-num_collect = 5
-# optim horizon: the horizon to calculate expected reward
-optim_horizon = 20
-# max_episode_step = 3000
-# --- total_optim_times = max_episode * num_optim * num_collect
 
-controller = Actor(env=env, action_dim=action_dim, state_dim=state_dim, learning_rate=learning_rate, debug=args.debug)
+controller = Actor(env=env, action_dim=action_dim, state_dim=state_dim, \
+        learning_rate=params["learning_rate"], debug=args.debug)
 # # load actor
 if args.load_actor_model:
     try:
-        controller.load_weights(model_path + 'actor.ckpt')
+        controller.load_weights(params["model_path"] + 'actor.ckpt')
         print("load actor model successfully")
     except:
         print("can not find checkpoint.")
@@ -108,14 +107,14 @@ for model in pilco.mgpr.models:
 # ep_step_list = []
 X_init = X[:, 0: state_dim]
 
-def random_policy(obs):
-    return env.action_space.sample()
+# def random_policy(obs):
+    # return env.action_space.sample()
 # random policy as comparing policy
-policy2 = random_policy
+# policy2 = random_policy
 
 ep_m_reward, ep_s_reward = [], []
 
-for rollouts in range(max_episode):
+for rollouts in range(params["max_episode"]):
     print("***" * 30)
     print("the " + str(rollouts) + "th rollout begins.")
     print("***" * 30)
@@ -124,7 +123,8 @@ for rollouts in range(max_episode):
 
     # the controller optimization
     # ipdb.set_trace()
-    pilco.optimize_controller(X_init, optim_horizon, num_optim=num_optim, num_collect=num_collect, gamma=reward_decay)
+    pilco.optimize_controller(X_init, params["horizon"], num_optim=params["num_optim"], \
+            num_collect=params["num_collect"], gamma=params["reward_decay"])
 
     # save controller's weights
     # print("saving the controller.")
@@ -147,24 +147,22 @@ for rollouts in range(max_episode):
     ep_s_reward.append(s)
 
 # save controller's weights
-pilco.controller.save_weights(model_path + 'actor.ckpt')
+pilco.controller.save_weights(params["model_path"] + 'actor.ckpt')
 # save gp model and data
-save_pilco(model_path, X, Y, pilco)
-
-# print("reward list: ", reward_list)
+save_pilco(params["model_path"], X, Y, pilco)
 
 print("Finished !")
 
 policy1 = pilco.controller.take_quick_action
 
-compare_policy(env, policy1, policy2)
+# compare_policy(env, policy1, policy2)
 
 fig = plt.figure()
 plt.errorbar(np.arange(1, len(ep_m_reward)+1), ep_m_reward, yerr=ep_s_reward, fmt="o")
 plt.xlabel('Episode')
 plt.ylabel('Episode Reward')
-fig.savefig(model_path + 'actor_ep_reward.png')
-print("figure store in: "+ model_path + 'actor_ep_reward.png')
+fig.savefig(params["model_path"] + 'actor_ep_reward.png')
+print("figure store in: "+ params["model_path"] + 'actor_ep_reward.png')
 
 
 # dataFrame = pd.DataFrame({'reward': reward_list})

@@ -147,8 +147,15 @@ class PILCO:
         for i in range(num_collect):
             total_reward = 0.
 
-            m_u, s_u, c_xu = self.controller.random_action(np.squeeze(m_x_init, 0), s_x_init)
-            print('mean and variance of action distribution: ', m_u, s_u)
+            random_num = random.random()
+            if random_num < 0.7:
+                m_u, s_u, c_xu = self.controller.compute_action(np.squeeze(m_x_init, 0), s_x_init)
+                m_u = self.controller.sample_action(m_u, s_u, 1)
+                s_u = np.diag(np.ones(self.control_dim) * 0.01)
+            else:
+                m_u, s_u, c_xu = self.controller.random_action(np.squeeze(m_x_init, 0), s_x_init)
+            # m_u, s_u, c_xu = self.controller.random_action(np.squeeze(m_x_init, 0), s_x_init)
+            # print('mean and variance of action distribution: ', m_u, s_u)
 
             ep_m_x.append(np.squeeze(m_x_init, 0))
             ep_s_x.append(s_x_init)
@@ -163,6 +170,7 @@ class PILCO:
                 current_reward, done = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x)
 
             total_reward += current_reward
+            print(m_x, s_x, current_reward)
             
             if done:
                 ep_reward.append(total_reward)
@@ -177,8 +185,9 @@ class PILCO:
                     current_reward, done = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x)
                 
                 total_reward += (current_reward * (gamma ** (j + 1)))
+                print(m_x, s_x, current_reward)
                 
-                if done:
+                if done or j == horizon - 1:
                     ep_reward.append(total_reward)
                     break            
 
@@ -237,7 +246,9 @@ class PILCO:
                     # discount_factor *= gamma
                 # if len(ep_reward) < num_collect:
                     # ep_reward.append(current_reward)
-
+        # reduce variance
+        mean_reward = np.mean(ep_reward)
+        ep_reward = list(map(lambda x: x - mean_reward, ep_reward))
         # store these data in controller for optimization 
         self.controller.store_transition(ep_m_x, ep_s_x, ep_reward, ep_ac)
         # print(ep_reward[0], ep_m_x[0], ep_s_x[0])

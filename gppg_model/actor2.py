@@ -96,12 +96,8 @@ class Actor():
             
             gvs = self.optimizer.compute_gradients(loss)
             print(gvs)
-            try:
-                capped_gvs = [(tf.clip_by_value(grad, -0.5, 0.5), var) for grad, var in gvs]
-                self.train_op = self.optimizer.apply_gradients(capped_gvs)
-            except: 
-                pass
-
+            capped_gvs = [(tf.clip_by_value(grad, -0.5, 0.5), var) for grad, var in gvs]
+            self.train_op = self.optimizer.apply_gradients(capped_gvs)
 
     def compute_action(self, m, s, sample_num=10):
         """
@@ -139,10 +135,7 @@ class Actor():
                 m_ac = np.squeeze(m_ac, 0)     # [action_dim]
 
                 s_ac = self.sess.run(self.s_ac) 
-                print("s_ac: ", s_ac)
-                # s_ac = np.squeeze(s_ac, 0)	  # [action_dim]
-
-                # s_ac should not be negative
+                # print("s_ac: ", s_ac)
                 s_ac = abs(s_ac)
 
                 dist_ac = self.tfd.MultivariateNormalDiag(loc=m_ac, scale_diag=s_ac)
@@ -184,7 +177,7 @@ class Actor():
 
                 m_ac = self.env.action_space.sample()
                 m_ac = m_ac.astype('float64')
-                s_ac = np.ones(self.action_dim) * 0.1
+                s_ac = np.ones(self.action_dim) * 0.01
                 dist_ac = self.tfd.MultivariateNormalDiag(loc=m_ac, scale_diag=s_ac)
                 actions = dist_ac.sample([sample_num])   # [10, action_dim]
 
