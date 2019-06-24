@@ -13,9 +13,9 @@ from actor2 import Actor
 from pilco import PILCO
 from test_actor import evaluate_policy, compare_policy
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1, 2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1, 2"
 # disable tensorflow info and warning messages
-os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("env_name", help="gym env name: classic control (CartPole-v1, MountainCarContinuous-v0, Pendulum-v0 ... )")
@@ -60,10 +60,8 @@ elif isinstance(env.observation_space, Box):
 if isinstance(env.action_space, Discrete):
     action_choice = env.action_space.n
     action_dim = 1
-    discrete_ac = True
 elif isinstance(env.action_space, Box):
     action_dim = env.action_space.shape[0]
-    discrete_ac = False
 
 
 controller = Actor(env=env, action_dim=action_dim, state_dim=state_dim, \

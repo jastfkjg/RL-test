@@ -8,7 +8,7 @@ from tensorflow.python import debug as tf_debug
 
 class Actor():
 
-    def __init__(self, env, action_dim, state_dim, learning_rate, hidden_size=10, discrete_ac=False, debug=False):
+    def __init__(self, env, action_dim, state_dim, learning_rate, hidden_size=20, discrete_ac=False, debug=False):
         self.action_dim = action_dim
         self.state_dim = state_dim
         self.learning_rate = learning_rate
@@ -37,7 +37,7 @@ class Actor():
         assert self.weight1.graph is self.graph
 
         config = tf.ConfigProto()
-        config.gpu_options.per_process_gpu_memory_fraction = 0.4
+        config.gpu_options.per_process_gpu_memory_fraction = 0.6
         self.sess = tf.Session(graph=self.graph, config=config)
 
         if debug:
@@ -87,8 +87,8 @@ class Actor():
         with tf.variable_scope("loss"):
             # policy gradient: minimize -(log(pi)*r)   
             neg_log_prob = - tf.log(self.dist.prob(self.ac))
-            loss = tf.reduce_mean(neg_log_prob * self.r)
-            # loss = tf.reduce_mean(neg_log_prob * self.r) + 0.01 * tf.nn.l2_loss(self.s_ac)
+            # loss = tf.reduce_mean(neg_log_prob * self.r)
+            loss = tf.reduce_mean(neg_log_prob * self.r) + 0.01 * tf.nn.l2_loss(self.s_ac)
 
         with tf.variable_scope("train"):
             # Adam optimizer

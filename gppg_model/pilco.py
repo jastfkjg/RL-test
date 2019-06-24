@@ -136,7 +136,7 @@ class PILCO:
 
     def get_data(self, m_x_init, s_x_init, horizon, num_collect=10, gamma=1.0, ac_sample_num=1):
         """
-        Get training data for Controller
+        Get training data for Controller/Actor
         :param m_x: mean of init/start observation [1, dim_state]
         :param s_x: variance of init observation   [dim_state, dim_state]
         :param num_collect: how many fake data(ep_m_x, ep_s_x, ep_reward, ep_ac) are going to create
@@ -148,7 +148,7 @@ class PILCO:
             total_reward = 0.
 
             random_num = random.random()
-            if random_num < 0.7:
+            if random_num < 0.5:
                 m_u, s_u, c_xu = self.controller.compute_action(np.squeeze(m_x_init, 0), s_x_init)
                 m_u = self.controller.sample_action(m_u, s_u, 1)
                 s_u = np.diag(np.ones(self.control_dim) * 0.01)
@@ -170,7 +170,7 @@ class PILCO:
                 current_reward, done = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x)
 
             total_reward += current_reward
-            print(m_x, s_x, current_reward)
+            print(current_reward)
             
             if done:
                 ep_reward.append(total_reward)
@@ -178,6 +178,7 @@ class PILCO:
 
             for j in range(horizon):
                 m_u, s_u, c_xu = self.controller.compute_action(np.squeeze(m_x, 0), s_x)
+                print(m_u, s_u)
                 
                 if self.reward.with_action:
                     current_reward, done = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x, m_u)
@@ -185,7 +186,7 @@ class PILCO:
                     current_reward, done = self.reward.compute_gaussian_reward(np.squeeze(m_x, 0), s_x)
                 
                 total_reward += (current_reward * (gamma ** (j + 1)))
-                print(m_x, s_x, current_reward)
+                print(current_reward)
                 
                 if done or j == horizon - 1:
                     ep_reward.append(total_reward)

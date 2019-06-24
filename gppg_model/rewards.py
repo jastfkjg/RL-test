@@ -285,7 +285,7 @@ class InvertedPendulumReward(Reward):
             total_reward += self.compute_reward(state)
         reward = total_reward / sample_num
 
-        if reward < 0.3:
+        if reward < 0.4:
             done = True
         else:
             done = False
