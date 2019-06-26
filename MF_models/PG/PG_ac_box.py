@@ -1,9 +1,10 @@
-
+"""
+PolicyGradient for Continuous action space
+"""
 import numpy as np
 import tensorflow as tf
 
 # from .. import distributions
-# import distributions.DiagGaussianPd as DiagGaussianPd
 from distributions import DiagGaussianPd
 
 from runner import Runner
@@ -24,7 +25,6 @@ class PolicyGradient:
 
         tf.reset_default_graph()
 
-
         if output_graph:
             tf.summary.FileWriter("logs/", self.sess.graph)
 
@@ -43,7 +43,7 @@ class PolicyGradient:
                                        kernel_initializer=tf.random_normal_initializer(mean=0, stddev=0.3),
                                        bias_initializer=tf.constant_initializer(0.1), name='actor_fc2')
 
-        logstd_act = tf.get_variable(name="logstd", shape=[1, self.action_dim],
+        logstd_act = tf.get_variable(name="logstd", shape=[1, self.action_dim], \
                                      initializer=tf.zeros_initializer())
         pdparam = tf.concat([mean_all_act, mean_all_act * 0.0 + logstd_act], axis=1)
         self.pd = DiagGaussianPd(pdparam)
@@ -71,7 +71,6 @@ class PolicyGradient:
             # calculate adv = reward - V(s)
             # reward = r + yV(s')
             advs = rewards
-            # value = self.sess.run(self.value, feed_dict={self.obs: state})
 
             td_map = {self.tf_obs: obs, self.tf_ac: actions, self.advantage: advs}
 
@@ -99,8 +98,7 @@ class PolicyGradient:
         print("model load successfully.")
 
 
-def learn(env, nsteps=5, timesteps=10000, ent_coef=0.01,
-          max_grad_norm=0.5, lr=0.001, gamma=0.95, log_interval=100,
+def learn(env, nsteps=500, nepisodes=200, ent_coef=0.01, lr=0.001, gamma=0.95, log_interval=10,\
           load_path=None):
     action_dim = env.action_space.shape[0]
     state_dim = env.observation_space.shape[0]
@@ -112,7 +110,7 @@ def learn(env, nsteps=5, timesteps=10000, ent_coef=0.01,
     # instantiate the runner object
     runner = Runner(env, model, nsteps=nsteps, gamma=gamma)
 
-    for update in range(1, timesteps//nsteps + 1):
+    for update in range(nepisodes):
         # get mini batch of experiences
         obs, rewards, actions = runner.run()
 
@@ -122,7 +120,7 @@ def learn(env, nsteps=5, timesteps=10000, ent_coef=0.01,
             # calculate if value function is a good predictor of return
             # ev = explained_variance(values, rewards)
             # TODO
-            print("the " + str(update) + "batch, with batch size " + str(nsteps))
+            print("the " + str(update) + "batch)
     return model
 
 

@@ -10,7 +10,6 @@ class Model:
             lr=1e-3, alpha=0.99, epsilon=1e-5):
         sess = tf.Session()
         with tf.variable_scope('a2c_model', reuse=tf.AUTO_REUSE):
-            # nenvs
             # step_model for sampling
             step_model = policy(nenvs, 1, sess)
             # train_model to train our network
@@ -50,15 +49,12 @@ class Model:
                 epsilon=epsilon)
         _train = trainer.apply_gradients(grads)
 
-        # lr = Scheduler(v=lr, nvalues=total_timesteps, schedule=lrschedue)
-
         def train(obs, states, rewards, mask, actions, values):
             # we calculate advantage A(s, a) = R + yV(s') - V(s)
             # rewards = R + yV(s')
             advs = rewards - values
             #for step in range(len(obs)):
-            td_map = {train_model.X:obs, A:actions, ADV: advs, R: rewards, LR:
-                    lr}
+            td_map = {train_model.X:obs, A:actions, ADV: advs, R: rewards, LR:lr}
             if states is not None:
                 td_map[train_model.S] = states
                 td_map[train_model.M] = masks

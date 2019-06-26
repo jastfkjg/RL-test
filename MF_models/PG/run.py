@@ -1,4 +1,5 @@
 import gym
+import mujoco_py
 import tensorflow
 import numpy as np
 import pandas as pd
@@ -7,15 +8,20 @@ import matplotlib.pyplot as plt
 
 from PG_ac_box import PolicyGradient, learn
 
-# hyperparams
-timesteps = 50000
+params = {
+        "nsteps": 500,
+        "nepisodes": 200,
+        "ent_coef": 0.01,
+        "learning_rate": 0.001,
+        "gamma": 0.99,
+        }
 
 def train():
 
-    env = gym.make("Pendulum-v0")
-    # env.reset()
+    # env = gym.make("Pendulum-v0")
+    env = gym.make("InvertedPendulum-v2")
 
-    model = learn(env=env, timesteps=timesteps, load_path="../checkpoints/pg_actor.ckpt")
+    model = learn(env=env, load_path="../checkpoints/pg_actor.ckpt")
     return model, env
 
 def main():
@@ -24,22 +30,25 @@ def main():
 
     obs = env.reset()
 
-    # state = model.initial_state if hasattr(model, 'initial_state') else None
-    # dones = np.zeros((1,))
+    max_episode, max_step = 50, 500
+    total_reward = []
+    for i in range(max_episode):
+        episode_rewards = 0
+        obs = env.reset()
+        print("%d th test episode begin" %i)
+        for j in range(max_step):
 
-    episode_rewards = 0
-    while True:
+            actions = model.step(obs)
 
-        actions = model.step(obs)
+            obs, reward, done, _ = env.step(actions)
+            episode_rewards += reward
+            env.render()
+            done = done.any() if isinstance(done, np.ndarray) else done
+            if done or j == max_step - 1:
+                print('episode_rew={}'.format(episode_rewards))
+                total_reward.append(episode_rewards)
+                break
 
-        obs, reward, done, _ = env.step(actions)
-        episode_rewards += reward
-        env.render()
-        done = done.any() if isinstance(done, np.ndarray) else done
-        if done:
-            print('episode_rew={}'.format(episode_rewards))
-            episode_rewards = 0
-            obs = env.reset()
     env.close()
 
     return model
